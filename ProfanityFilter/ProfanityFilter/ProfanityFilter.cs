@@ -186,13 +186,13 @@ namespace ProfanityFilter
         /// <param name="profanity">Profanity to look for.</param>
         /// <returns>Tuple of the following format (start character, end character, found enclosed word).
         /// If no enclosed word is found then return null.</returns>
-        public (int, int, string)? GetCompleteWord(string toCheck, string profanity)
+        private (int startWordIndex, int endWordIndex, string wholeWord)? GetCompleteWord(string toCheck, string profanity)
         {
             if (string.IsNullOrEmpty(toCheck)) return null;
 
             var profanityLowerCase = profanity.ToLower(CultureInfo.InvariantCulture);
             var toCheckLowerCase = toCheck.ToLower(CultureInfo.InvariantCulture);
-            var regexMatch = Regex.Match(toCheck, profanityLowerCase);
+            var regexMatch = Regex.Match(toCheckLowerCase, profanityLowerCase);
 
             if (!regexMatch.Success) return null;
 
@@ -255,7 +255,7 @@ namespace ProfanityFilter
 
             foreach (var word in swearList.OrderByDescending(x => x.Length))
             {
-                (int, int, string)? result;
+                (int startWordIndex, int endWordIndex, string wholeWord)? result;
                 var multiWord = word.Split(' ');
 
                 if (multiWord.Length == 1)
@@ -266,18 +266,18 @@ namespace ProfanityFilter
                         if (result == null) continue;
 
                         // TODO нужна ли вся эта логика. Возможно просто нужна чуть чуть сложная регулярка, которая будет заменять все, что нужно
-                        var filtered = result.Value.Item3;
+                        var filtered = result.Value.wholeWord;
 
                         if (ignoreNumeric) filtered = Regex.Replace(result.Value.Item3, @"[\d-]", string.Empty);
 
                         if (IsSwearWord(filtered, word))
-                            for (var i = result.Value.Item1; i < result.Value.Item2; i++)
+                            for (var i = result.Value.startWordIndex; i < result.Value.endWordIndex; i++)
                             {
                                 censored[i] = censorCharacter;
                                 tracker[i] = censorCharacter;
                             }
                         else
-                            for (var i = result.Value.Item1; i < result.Value.Item2; i++)
+                            for (var i = result.Value.startWordIndex; i < result.Value.endWordIndex; i++)
                                 tracker[i] = censorCharacter;
                     } while (result != null);
                 else

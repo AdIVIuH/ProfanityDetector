@@ -34,7 +34,7 @@ namespace ProfanityFilter
         /// </summary>
         public ProfanityBase()
         {
-            ProfanityPatterns = new List<string>();
+            ProfanityPatterns = new List<string>(ProfanitiesDictionary.Patterns);
         }
 
         /// <summary>
