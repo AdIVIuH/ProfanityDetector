@@ -1,6 +1,6 @@
 ﻿/*
 MIT License
-Copyright (c) 2019 
+Copyright (c) 2019
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -17,18 +17,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-using System;
-using System.Collections.ObjectModel;
 
 namespace ProfanityFilter.Interfaces
 {
     public interface IAllowList
     {
-        void Add(string wordToAllowlist);
+        int Count { get; }
+        void Add(string wordToAllowList);
         bool Contains(string wordToCheck);
         bool Remove(string wordToRemove);
         void Clear();
-        int Count { get; }
-        ReadOnlyCollection<string> ToList { get;  }
     }
 }

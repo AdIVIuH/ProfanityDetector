@@ -30,7 +30,7 @@ namespace ProfanityFilter.Tests.Unit
         [TestMethod]
         public void ConstructorSetsAllowList()
         {
-            IProfanityFilter filter = new ProfanityFilter();
+            var filter = new ProfanityFilter();
             Assert.IsNotNull(filter.AllowList);
         }
 
@@ -249,58 +249,6 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(2, allowList.Count);
 
             Assert.IsFalse(allowList.Remove("DoesNotExist"));
-        }
-
-        [TestMethod]
-        public void ToListReturnsReadOnlyCollectionContainingAllowList()
-        {
-            var allowList = new AllowList();
-            allowList.Add("Scunthorpe");
-            allowList.Add("Penistone");
-
-            var readonlyList = allowList.ToList;
-            Assert.IsNotNull(readonlyList);
-            Assert.AreEqual(2, readonlyList.Count);
-
-            Assert.AreEqual("scunthorpe", readonlyList[0]);
-            Assert.AreEqual("penistone", readonlyList[1]);
-        }
-
-        [TestMethod]
-        public void ToListReturnsEmptyReadOnlyCollectionContaining()
-        {
-            var allowList = new AllowList();
-
-            var readonlyList = allowList.ToList;
-            Assert.IsNotNull(readonlyList);
-            Assert.AreEqual(0, readonlyList.Count);
-        }
-
-        [TestMethod]
-        public void ToListReturnsReadOnlyCollectionContainingAllowListAfterListModification()
-        {
-            var allowList = new AllowList();
-            allowList.Add("Scunthorpe");
-            allowList.Add("Penistone");
-
-            var readonlyList = allowList.ToList;
-            Assert.IsNotNull(readonlyList);
-            Assert.AreEqual(2, readonlyList.Count);
-
-            Assert.AreEqual("scunthorpe", readonlyList[0]);
-            Assert.AreEqual("penistone", readonlyList[1]);
-
-            allowList.Add("Bugger");
-            allowList.Add("Plonker");
-
-            readonlyList = allowList.ToList;
-            Assert.IsNotNull(readonlyList);
-            Assert.AreEqual(4, readonlyList.Count);
-
-            Assert.AreEqual("scunthorpe", readonlyList[0]);
-            Assert.AreEqual("penistone", readonlyList[1]);
-            Assert.AreEqual("bugger", readonlyList[2]);
-            Assert.AreEqual("plonker", readonlyList[3]);
         }
     }
 }

@@ -21,19 +21,20 @@ SOFTWARE.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace ProfanityFilter
 {
-    public partial class ProfanityBase
+    public class ProfanityBase
     {
-        protected List<string> _profanities;
+        protected readonly List<string> ProfanityPatterns;
 
         /// <summary>
         /// Constructor that initializes the standard profanity list.
         /// </summary>
         public ProfanityBase()
         {
-            _profanities = new List<string>(_wordList);
+            ProfanityPatterns = new List<string>();
         }
 
         /// <summary>
@@ -45,7 +46,7 @@ namespace ProfanityFilter
         {
             if (profanityList == null) throw new ArgumentNullException(nameof(profanityList));
 
-            _profanities = new List<string>(profanityList);
+            ProfanityPatterns = new List<string>(profanityList);
         }
 
         /// <summary>
@@ -55,9 +56,7 @@ namespace ProfanityFilter
         /// <param name="profanityList">List of words considered profanities.</param>
         protected ProfanityBase(List<string> profanityList)
         {
-            if (profanityList == null) throw new ArgumentNullException(nameof(profanityList));
-
-            _profanities = profanityList;
+            ProfanityPatterns = profanityList ?? throw new ArgumentNullException(nameof(profanityList));
         }
 
         /// <summary>
@@ -68,31 +67,34 @@ namespace ProfanityFilter
         {
             if (string.IsNullOrEmpty(profanity)) throw new ArgumentNullException(nameof(profanity));
 
-            _profanities.Add(profanity);
+            var pattern = WordToPattern(profanity);
+            ProfanityPatterns.Add(pattern);
         }
 
         /// <summary>
-        /// Add a custom array profanities to the defaultl list. This adds to the
-        /// default list, and does not replace it.
+        /// Adds a list of profanity words.
         /// </summary>
-        /// <param name="profanityList">The array of profanities to add.</param>
-        public void AddProfanity(string[] profanityList)
+        /// <param name="words">The list of profanities to add</param>
+        public void AddProfanityWords(IEnumerable<string> words)
         {
-            if (profanityList == null) throw new ArgumentNullException(nameof(profanityList));
+            if (words == null) throw new ArgumentNullException(nameof(words));
 
-            _profanities.AddRange(profanityList);
+            var patterns = words.Select(WordToPattern);
+            ProfanityPatterns.AddRange(patterns);
         }
 
-        /// <summary>
-        /// Add a custom list profanities to the defaultl list. This adds to the
-        /// default list, and does not replace it.
-        /// </summary>
-        /// <param name="profanityList">The list of profanities to add.</param>
-        public void AddProfanity(List<string> profanityList)
-        {
-            if (profanityList == null) throw new ArgumentNullException(nameof(profanityList));
+        private static string WordToPattern(string word) => 
+            $@"(\b{word.ToLower(CultureInfo.InvariantCulture)}\b)";
 
-            _profanities.AddRange(profanityList);
+        /// <summary>
+        /// Adds a list of profanity patterns.
+        /// </summary>
+        /// <param name="patterns">The list of profanity patterns to add</param>
+        public void AddProfanityPatterns(IEnumerable<string> patterns)
+        {
+            if (patterns == null) throw new ArgumentNullException(nameof(patterns));
+
+            ProfanityPatterns.AddRange(patterns);
         }
 
         /// <summary>
@@ -104,23 +106,7 @@ namespace ProfanityFilter
         {
             if (string.IsNullOrEmpty(profanity)) throw new ArgumentNullException(nameof(profanity));
 
-            return _profanities.Remove(profanity.ToLower(CultureInfo.InvariantCulture));
-        }
-
-        /// <summary>
-        /// Remove a list of profanities from the current loaded list of profanities.
-        /// </summary>
-        /// <param name="profanities">The list of profanities to remove from the list.</param>
-        /// <returns>True if the profanities were removed. False otherwise.</returns>
-        public bool RemoveProfanity(List<string> profanities)
-        {
-            if (profanities == null) throw new ArgumentNullException(nameof(profanities));
-
-            foreach (var naughtyWord in profanities)
-                if (!RemoveProfanity(naughtyWord))
-                    return false;
-
-            return true;
+            return ProfanityPatterns.Remove(profanity.ToLower(CultureInfo.InvariantCulture));
         }
 
         /// <summary>
@@ -128,7 +114,7 @@ namespace ProfanityFilter
         /// </summary>
         /// <param name="profanities">The array of profanities to remove from the list.</param>
         /// <returns>True if the profanities were removed. False otherwise.</returns>
-        public bool RemoveProfanity(string[] profanities)
+        public bool RemoveProfanity(IEnumerable<string> profanities)
         {
             if (profanities == null) throw new ArgumentNullException(nameof(profanities));
 
@@ -144,12 +130,12 @@ namespace ProfanityFilter
         /// </summary>
         public void Clear()
         {
-            _profanities.Clear();
+            ProfanityPatterns.Clear();
         }
 
         /// <summary>
         /// Return the number of profanities in the system.
         /// </summary>
-        public int Count => _profanities.Count;
+        public int Count => ProfanityPatterns.Count;
     }
 }

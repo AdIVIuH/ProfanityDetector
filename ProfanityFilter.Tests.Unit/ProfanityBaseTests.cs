@@ -1,6 +1,6 @@
 /*
 MIT License
-Copyright (c) 2019 
+Copyright (c) 2019
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -21,7 +21,6 @@ SOFTWARE.
 using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ProfanityFilter.Interfaces;
 
 namespace ProfanityFilter.Tests.Unit
 {
@@ -40,12 +39,12 @@ namespace ProfanityFilter.Tests.Unit
         {
             string[] _wordList =
             {
-               "fuck",
-               "shit",
+                "fuck",
+                "shit",
                 "bollocks"
             };
 
-            IProfanityFilter filter = new ProfanityFilter(_wordList);
+            var filter = new ProfanityFilter(_wordList);
 
             Assert.AreEqual(3, filter.Count);
         }
@@ -67,7 +66,7 @@ namespace ProfanityFilter.Tests.Unit
                 "bollocks"
             };
 
-            IProfanityFilter filter = new ProfanityFilter(new List<string>(_wordList));
+            var filter = new ProfanityFilter(new List<string>(_wordList));
 
             Assert.AreEqual(3, filter.Count);
         }
@@ -77,7 +76,7 @@ namespace ProfanityFilter.Tests.Unit
         public void AddProfanityThrowsArgumentNullExceptionForNullProfanity()
         {
             var filter = new ProfanityBase();
-            filter.AddProfanity((string)null);
+            filter.AddProfanity(null);
         }
 
         [TestMethod]
@@ -103,7 +102,7 @@ namespace ProfanityFilter.Tests.Unit
         public void AddProfanityThrowsArgumentNullExceptionForNullProfanityArray()
         {
             var filter = new ProfanityBase();
-            filter.AddProfanity((string[])null);
+            filter.AddProfanityWords(null);
         }
 
         [TestMethod]
@@ -121,7 +120,7 @@ namespace ProfanityFilter.Tests.Unit
             filter.Clear();
             Assert.AreEqual(0, filter.Count);
 
-            filter.AddProfanity(new List<string>(_wordList));
+            filter.AddProfanityWords(new List<string>(_wordList));
 
             Assert.AreEqual(3, filter.Count);
         }
@@ -141,26 +140,34 @@ namespace ProfanityFilter.Tests.Unit
             filter.Clear();
             Assert.AreEqual(0, filter.Count);
 
-            filter.AddProfanity(_wordList);
+            filter.AddProfanityWords(_wordList);
 
             Assert.AreEqual(3, filter.Count);
         }
 
         [TestMethod]
-        public void ReturnCountForDetaultProfanityList()
+        public void ReturnCountForDefaultProfanityList()
         {
             var filter = new ProfanityBase();
             var count = filter.Count;
 
-            Assert.AreEqual(count, 1615);
+            Assert.AreEqual(count, 0);
         }
 
         [TestMethod]
         public void ClearEmptiesProfanityList()
         {
-            var filter = new ProfanityBase();
+            string[] wordList =
+            {
+                "fuck",
+                "shit",
+                "bollocks"
+            };
 
-            Assert.AreEqual(1615, filter.Count);
+            var filter = new ProfanityBase();
+            filter.AddProfanityWords(wordList);
+
+            Assert.AreEqual(wordList.Length, filter.Count);
 
             filter.Clear();
 
@@ -168,34 +175,34 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [TestMethod]
-        public void RemoveDeletesAProfanity()
-        {
-            var filter = new ProfanityBase();
-
-            Assert.AreEqual(1615, filter.Count);
-
-            filter.RemoveProfanity("shit");
-
-            Assert.AreEqual(1614, filter.Count);
-        }
-
-        [TestMethod]
         public void RemoveDeletesAProfanityAndReturnsTrue()
         {
+            string[] wordList =
+            {
+                "fuck",
+                "shit",
+                "bollocks"
+            };
             var filter = new ProfanityBase();
-
-            Assert.AreEqual(1615, filter.Count);
+            filter.AddProfanityWords(wordList);
+            Assert.AreEqual(wordList.Length, filter.Count);
 
             Assert.IsTrue(filter.RemoveProfanity("shit"));
 
-            Assert.AreEqual(1614, filter.Count);
+            Assert.AreEqual(wordList.Length - 1, filter.Count);
         }
 
         [TestMethod]
-        public void RemoveDeletesAProfanityAndIsProfanitiyIgnoresIt()
+        public void RemoveDeletesAProfanityAndIsProfanityIgnoresIt()
         {
+            string[] wordList =
+            {
+                "fuck",
+                "shit",
+                "bollocks"
+            };
             var filter = new ProfanityFilter();
-
+            filter.AddProfanityWords(wordList);
             Assert.IsTrue(filter.IsProfanity("shit"));
             filter.RemoveProfanity("shit");
 
@@ -206,50 +213,8 @@ namespace ProfanityFilter.Tests.Unit
         public void RemoveDeletesAProfanityAndReturnsFalseIfProfanityDoesntExist()
         {
             var filter = new ProfanityBase();
-
-            Assert.AreEqual(1615, filter.Count);
-
+            
             Assert.IsFalse(filter.RemoveProfanity("fluffy"));
-
-            Assert.AreEqual(1615, filter.Count);
-        }
-
-        [TestMethod]
-        public void RemoveListDeletesProfanitiesFromPrimaryList()
-        {
-            var filter = new ProfanityBase();
-
-            Assert.AreEqual(1615, filter.Count);
-
-            var listOfProfanitiesToRemove = new List<string>
-            {
-                "shit",
-                "fuck",
-                "cock"
-            };
-
-            Assert.IsTrue(filter.RemoveProfanity(listOfProfanitiesToRemove));
-
-            Assert.AreEqual(1612, filter.Count);
-        }
-
-        [TestMethod]
-        public void RemoveArrayDeletesProfanitiesFromPrimaryList()
-        {
-            var filter = new ProfanityBase();
-
-            Assert.AreEqual(1615, filter.Count);
-
-            string[] listOfProfanitiesToRemove =
-            {
-                "shit",
-                "fuck",
-                "cock"
-            };
-
-            Assert.IsTrue(filter.RemoveProfanity(listOfProfanitiesToRemove));
-
-            Assert.AreEqual(1612, filter.Count);
         }
 
         [TestMethod]

@@ -22,7 +22,4 @@
   <ItemGroup>
     <ProjectReference Include="..\ProfanityFilter\ProfanityFilter\ProfanityFilter.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Remove=".DS_Store" />
-  </ItemGroup>
 </Project>

@@ -22,6 +22,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
 using ProfanityFilter.Interfaces;
 
 namespace ProfanityFilter
@@ -34,38 +36,27 @@ namespace ProfanityFilter
         {
             _allowList = new List<string>
             {
-                "\bолеговн.*\b",
-                "\bгребля\b",
-                "\b.*(С|с)ергей.*\b",
-                "\b.*к(о|а)манд.*\b",
-                "\b.*л(о|а)х(о|а)трон.*\b",
-                "\bхул(е|и)ган\b",
-                "\b.*м(а|о)нд(а|о)рин.*\b",
+                "олеговн.*",
+                "гребля",
+                ".*(С|с)ергей.*",
+                ".*к(о|а)манд.*",
+                ".*л(о|а)х(о|а)трон.*",
+                "хул(е|и)ган",
+                ".*м(а|о)нд(а|о)рин.*",
             };
-        }
-
-        /// <summary>
-        /// Return an instance of a read only collection containing allow list
-        /// </summary>
-        public ReadOnlyCollection<string> ToList
-        {
-            get
-            {
-                return new ReadOnlyCollection<string>(_allowList);
-            }
         }
 
         /// <summary>
         /// Add a word to the profanity allow list. This means a word that is in the allow list
         /// can be ignored. All words are treated as case insensitive.
         /// </summary>
-        /// <param name="wordToAllowlist">The word that you want to allow list.</param>
-        public void Add(string wordToAllowlist)
+        /// <param name="wordToAllowList">The word that you want to allow list.</param>
+        public void Add(string wordToAllowList)
         {
-            if (string.IsNullOrEmpty(wordToAllowlist)) throw new ArgumentNullException(nameof(wordToAllowlist));
+            if (string.IsNullOrEmpty(wordToAllowList)) throw new ArgumentNullException(nameof(wordToAllowList));
 
-            if (!_allowList.Contains(wordToAllowlist.ToLower(CultureInfo.InvariantCulture)))
-                _allowList.Add(wordToAllowlist.ToLower(CultureInfo.InvariantCulture));
+            if (!_allowList.Contains(wordToAllowList.ToLower(CultureInfo.InvariantCulture)))
+                _allowList.Add(wordToAllowList.ToLower(CultureInfo.InvariantCulture));
         }
 
         /// <summary>
@@ -77,7 +68,7 @@ namespace ProfanityFilter
         {
             if (string.IsNullOrEmpty(wordToCheck)) throw new ArgumentNullException(nameof(wordToCheck));
 
-            return _allowList.Contains(wordToCheck.ToLower(CultureInfo.InvariantCulture));
+            return _allowList.Any(allowWordPattern => Regex.IsMatch(wordToCheck.ToLower(CultureInfo.InvariantCulture), allowWordPattern));
         }
 
         /// <summary>
