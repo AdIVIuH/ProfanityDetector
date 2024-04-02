@@ -1,6 +1,6 @@
 ﻿/*
 MIT License
-Copyright (c) 2019 
+Copyright (c) 2019
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -17,6 +17,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
 namespace ProfanityFilter
 {
     /// <summary>
@@ -1744,6 +1745,17 @@ namespace ProfanityFilter
             @"\bкери бобо$\b",
             @"\bсиях$\b",
             @"\bсаг$\b",
+        };
+
+        public static readonly string[] AllowList =
+        {
+            "олеговн.*",
+            "гребля",
+            ".*(С|с)ергей.*",
+            ".*к(о|а)манд.*",
+            ".*л(о|а)х(о|а)трон.*",
+            "хул(е|и)ган",
+            ".*м(а|о)нд(а|о)рин.*",
         };
     }
 }

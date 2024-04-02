@@ -22,53 +22,56 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProfanityFilter
 {
     public class ProfanityBase
     {
-        protected readonly List<string> ProfanityPatterns;
+        protected readonly HashSet<string> ProfanityPatterns;
+        protected readonly HashSet<string> ProfanityWords;
 
         /// <summary>
         /// Constructor that initializes the standard profanity list.
         /// </summary>
         public ProfanityBase()
         {
-            ProfanityPatterns = new List<string>(ProfanitiesDictionary.Patterns);
-        }
-
-        /// <summary>
-        /// Constructor that allows you to insert a custom array or profanities.
-        /// This list will replace the default list.
-        /// </summary>
-        /// <param name="profanityList">Array of words considered profanities.</param>
-        protected ProfanityBase(string[] profanityList)
-        {
-            if (profanityList == null) throw new ArgumentNullException(nameof(profanityList));
-
-            ProfanityPatterns = new List<string>(profanityList);
-        }
-
-        /// <summary>
-        /// Constructor that allows you to insert a custom list or profanities.
-        /// This list will replace the default list.
-        /// </summary>
-        /// <param name="profanityList">List of words considered profanities.</param>
-        protected ProfanityBase(List<string> profanityList)
-        {
-            ProfanityPatterns = profanityList ?? throw new ArgumentNullException(nameof(profanityList));
+            ProfanityPatterns = new HashSet<string>();
+            ProfanityWords = new HashSet<string>();
         }
 
         /// <summary>
         /// Add a custom profanity to the list.
         /// </summary>
-        /// <param name="profanity">The profanity to add.</param>
-        public void AddProfanity(string profanity)
+        /// <param name="profanityWord">The profanity word to add.</param>
+        public void AddProfanityWord(string profanityWord)
         {
-            if (string.IsNullOrEmpty(profanity)) throw new ArgumentNullException(nameof(profanity));
+            if (string.IsNullOrEmpty(profanityWord)) throw new ArgumentNullException(nameof(profanityWord));
 
-            var pattern = WordToPattern(profanity);
+            ProfanityWords.Add(profanityWord);
+        }
+
+        /// <summary>
+        /// Add a custom profanity to the list.
+        /// </summary>
+        /// <param name="pattern">The profanity pattern to add.</param>
+        public void AddProfanityPattern(string pattern)
+        {
+            if (string.IsNullOrEmpty(pattern)) throw new ArgumentNullException(nameof(pattern));
+
             ProfanityPatterns.Add(pattern);
+        }
+
+        /// <summary>
+        /// Adds a list of profanity patterns.
+        /// </summary>
+        /// <param name="patterns">The list of profanity patterns to add</param>
+        public void AddProfanityPatterns(IEnumerable<string> patterns)
+        {
+            if (patterns == null) throw new ArgumentNullException(nameof(patterns));
+
+            foreach (var pattern in patterns)
+                AddProfanityPattern(pattern);
         }
 
         /// <summary>
@@ -79,50 +82,37 @@ namespace ProfanityFilter
         {
             if (words == null) throw new ArgumentNullException(nameof(words));
 
-            var patterns = words.Select(WordToPattern);
-            ProfanityPatterns.AddRange(patterns);
+            foreach (var word in words)
+                AddProfanityWord(word);
         }
 
-        private static string WordToPattern(string word) => 
+        protected static string WordToPattern(string word) =>
             $@"(\b{word.ToLower(CultureInfo.InvariantCulture)}\b)";
 
         /// <summary>
-        /// Adds a list of profanity patterns.
+        /// Remove a profanity from the current loaded list of profanities.
         /// </summary>
-        /// <param name="patterns">The list of profanity patterns to add</param>
-        public void AddProfanityPatterns(IEnumerable<string> patterns)
+        /// <param name="word">The profanity to remove from the list.</param>
+        /// <returns>True of the profanity was removed. False otherwise.</returns>
+        public bool RemoveProfanityWord(string word)
         {
-            if (patterns == null) throw new ArgumentNullException(nameof(patterns));
+            if (string.IsNullOrEmpty(word))
+                throw new ArgumentNullException(nameof(word));
 
-            ProfanityPatterns.AddRange(patterns);
+            return ProfanityWords.Remove(word.ToLower(CultureInfo.InvariantCulture));
         }
 
         /// <summary>
         /// Remove a profanity from the current loaded list of profanities.
         /// </summary>
-        /// <param name="profanity">The profanity to remove from the list.</param>
+        /// <param name="pattern">The profanity to remove from the list.</param>
         /// <returns>True of the profanity was removed. False otherwise.</returns>
-        public bool RemoveProfanity(string profanity)
+        public bool RemoveProfanityPattern(string pattern)
         {
-            if (string.IsNullOrEmpty(profanity)) throw new ArgumentNullException(nameof(profanity));
+            if (string.IsNullOrEmpty(pattern))
+                throw new ArgumentNullException(nameof(pattern));
 
-            return ProfanityPatterns.Remove(profanity.ToLower(CultureInfo.InvariantCulture));
-        }
-
-        /// <summary>
-        /// Remove an array of profanities from the current loaded list of profanities.
-        /// </summary>
-        /// <param name="profanities">The array of profanities to remove from the list.</param>
-        /// <returns>True if the profanities were removed. False otherwise.</returns>
-        public bool RemoveProfanity(IEnumerable<string> profanities)
-        {
-            if (profanities == null) throw new ArgumentNullException(nameof(profanities));
-
-            foreach (var naughtyWord in profanities)
-                if (!RemoveProfanity(naughtyWord))
-                    return false;
-
-            return true;
+            return ProfanityPatterns.Remove(pattern.ToLower(CultureInfo.InvariantCulture));
         }
 
         /// <summary>
@@ -131,11 +121,74 @@ namespace ProfanityFilter
         public void Clear()
         {
             ProfanityPatterns.Clear();
+            ProfanityWords.Clear();
         }
 
         /// <summary>
         /// Return the number of profanities in the system.
         /// </summary>
-        public int Count => ProfanityPatterns.Count;
+        public int Count => ProfanityPatterns.Count + ProfanityWords.Count;
+
+        public bool Contains(string term, bool usePattern = false)
+        {
+            if (string.IsNullOrWhiteSpace(term)) return false;
+
+            return usePattern
+                ? ContainsByPattern(term)
+                : ContainsByWord(term);
+        }
+
+        /// <summary>
+        /// Check whether a given term matches an entry in the profanity list. ContainsProfanity will first
+        /// check if the word exists on the allow list. If it is on the allow list, then false
+        /// will be returned.
+        /// </summary>
+        /// <param name="pattern">Pattern to check.</param>
+        /// <returns>True if the term contains a profanity, False otherwise.</returns>
+        public virtual bool ContainsByPattern(string pattern) =>
+            !string.IsNullOrWhiteSpace(pattern)
+            && ProfanityPatterns.Any(p => IsProfanityPatternMatched(pattern, p));
+
+        public virtual bool ContainsByWord(string word) =>
+            !string.IsNullOrWhiteSpace(word)
+            && ProfanityWords.Contains(word.ToLower(CultureInfo.InvariantCulture));
+
+        private static bool IsProfanityPatternMatched(string term, string pattern)
+        {
+            var lowerCaseTerm = term.ToLower(CultureInfo.InvariantCulture);
+            return Regex.IsMatch(lowerCaseTerm, pattern);
+        }
+
+        protected IReadOnlyList<string> GetMatchedProfanities(string sentence, bool onlyExactMatch = false, bool includePatterns = true)
+        {
+            var matchedProfanities = new List<string>();
+            var lowerCaseSentence = sentence.ToLower(CultureInfo.InvariantCulture);
+            
+            // ReSharper disable once ConvertIfStatementToSwitchStatement
+            if (onlyExactMatch && ContainsByWord(lowerCaseSentence))
+                matchedProfanities.Add(lowerCaseSentence);
+            
+            if(!onlyExactMatch)
+            {
+                var partialMatchedProfanityWords = ProfanityWords
+                    .Where(profanityWord => lowerCaseSentence.Contains(profanityWord))
+                    .ToList();
+                matchedProfanities.AddRange(partialMatchedProfanityWords);
+            }
+
+            // ReSharper disable once InvertIf
+            if (includePatterns)
+            {
+                var matchedPatterns = ProfanityPatterns
+                    .Where(pattern => IsProfanityPatternMatched(lowerCaseSentence, pattern))
+                    .ToList();
+                matchedProfanities.AddRange(matchedPatterns);
+            }
+
+            return matchedProfanities
+                .Distinct()
+                .ToList()
+                .AsReadOnly();
+        }
     }
 }

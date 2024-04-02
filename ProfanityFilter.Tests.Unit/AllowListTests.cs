@@ -1,6 +1,6 @@
 /*
 MIT License
-Copyright (c) 2019 
+Copyright (c) 2019
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -19,39 +19,41 @@ SOFTWARE.
 */
 
 using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using FluentAssertions;
+using NUnit.Framework;
 using ProfanityFilter.Interfaces;
+using Assert = NUnit.Framework.Assert;
 
 namespace ProfanityFilter.Tests.Unit
 {
-    [TestClass]
+    [TestFixture]
     public class AllowListTests
     {
-        [TestMethod]
-        public void ConstructorSetsAllowList()
+        [Test]
+        public void Constructor_SetsAllowList()
         {
             var filter = new ProfanityFilter();
             Assert.IsNotNull(filter.AllowList);
         }
 
-        [TestMethod]
-        public void ConstructorSetsAllowListToEmpty()
+        [Test]
+        public void Constructor_SetsAllowListToEmpty()
         {
             IAllowList filter = new AllowList();
             Assert.AreEqual(0, filter.Count);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void AddThrowsArgumentNullExceptionIfInputStringIsNullOrEmpty()
+        [Test]
+        public void Add_ThrowsArgumentNullException_IfInputStringIsNullOrEmpty()
         {
             var allowList = new AllowList();
 
-            allowList.Add("");
+            var act = () => allowList.Add("");
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        public void AddInsertsItemIntoTheAllowList()
+        [Test]
+        public void Add_InsertsItemIntoTheAllowList()
         {
             var allowList = new AllowList();
 
@@ -62,8 +64,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(1, allowList.Count);
         }
 
-        [TestMethod]
-        public void AddInsertsLowercaseItemIntoTheAllowList()
+        [Test]
+        public void Add_InsertsLowercaseItemIntoTheAllowList()
         {
             var allowList = new AllowList();
 
@@ -72,8 +74,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Contains("scunthorpe"));
         }
 
-        [TestMethod]
-        public void AddDoesntAllowDuplicateEntries()
+        [Test]
+        public void Add_DoesNotAllowDuplicateEntries()
         {
             var allowList = new AllowList();
 
@@ -88,8 +90,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(1, allowList.Count);
         }
 
-        [TestMethod]
-        public void AddDoesntAllowDuplicateEntriesOfMixedCase()
+        [Test]
+        public void Add_DoesntAllowDuplicateEntriesOfMixedCase()
         {
             var allowList = new AllowList();
 
@@ -108,17 +110,17 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(1, allowList.Count);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void ContainsThrowsArgumentNullExceptionIfInputStringIsNullOrEmpty()
+        [Test]
+        public void Contains_ThrowsArgumentNullException_IfInputStringIsNullOrEmpty()
         {
             var allowList = new AllowList();
 
-            allowList.Contains("");
+            var act = () => allowList.Contains("");
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        public void ContainsReturnsTrueForAllowListItemInTheList()
+        [Test]
+        public void Contains_ReturnsTrue_ForAllowListItemInTheList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -128,8 +130,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Contains("Penistone"));
         }
 
-        [TestMethod]
-        public void ContainsReturnsTrueForAllowListItemInTheListWithMixedCase()
+        [Test]
+        public void Contains_ReturnsTrue_ForAllowListItemInTheListWithMixedCase()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -139,8 +141,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Contains("PeniStone"));
         }
 
-        [TestMethod]
-        public void ContainsReturnsFalseForAllowListItemNotInTheList()
+        [Test]
+        public void Contains_ReturnsFalse_ForAllowListItemNotInTheList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -150,8 +152,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsFalse(allowList.Contains("Gobble"));
         }
 
-        [TestMethod]
-        public void CountReturnsTwoForTwoEntriesInTheList()
+        [Test]
+        public void Count_ReturnsTwo_ForTwoEntriesInTheList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -160,8 +162,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(2, allowList.Count);
         }
 
-        [TestMethod]
-        public void CountReturnsTwoForTwoEntriesInTheListAfterMixedcaseAdditions()
+        [Test]
+        public void Count_ReturnsTwo_ForTwoEntriesInTheListAfterMixedcaseAdditions()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -172,8 +174,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(2, allowList.Count);
         }
 
-        [TestMethod]
-        public void ClearRemovesEntriesFromTheList()
+        [Test]
+        public void Clear_RemovesEntriesFromTheList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -186,17 +188,17 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(0, allowList.Count);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void RemoveThrowsArgumentNullExceptionIfInputStringIsNullOrEmpty()
+        [Test]
+        public void Remove_ThrowsArgumentNullException_IfInputStringIsNullOrEmpty()
         {
             var allowList = new AllowList();
 
-            allowList.Remove("");
+            var act = () => allowList.Remove("");
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        public void RemoveEntryFromTheAllowList()
+        [Test]
+        public void Remove_EntryFromTheAllowList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -211,8 +213,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Contains("Penistone"));
         }
 
-        [TestMethod]
-        public void RemoveMixedCaseEntryFromTheAllowList()
+        [Test]
+        public void Remove_MixedCaseEntryFromTheAllowList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -227,8 +229,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Contains("Penistone"));
         }
 
-        [TestMethod]
-        public void RemoveEntryFromTheAllowListReturnsTrue()
+        [Test]
+        public void Remove_ReturnsTrue_ForExistingEntryFromTheAllowList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");
@@ -239,8 +241,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.IsTrue(allowList.Remove("Scunthorpe"));
         }
 
-        [TestMethod]
-        public void RemoveNonExistingEntryFromTheAllowListReturnsFalse()
+        [Test]
+        public void Remove_ReturnsFalse_ForNonExistingEntryFromTheAllowList()
         {
             var allowList = new AllowList();
             allowList.Add("Scunthorpe");

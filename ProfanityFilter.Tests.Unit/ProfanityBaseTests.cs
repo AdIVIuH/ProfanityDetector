@@ -20,95 +20,52 @@ SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using FluentAssertions;
+using NUnit.Framework;
 
 namespace ProfanityFilter.Tests.Unit
 {
-    [TestClass]
+    [TestFixture]
     public class ProfanityBaseTests
     {
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void ConstructorThrowsArgumentNullExceptionForNullWordListArray()
-        {
-            _ = new ProfanityFilter((string[])null);
-        }
-
-        [TestMethod]
-        public void ConstructorOverridesProfanityListWithArray()
-        {
-            string[] _wordList =
-            {
-                "fuck",
-                "shit",
-                "bollocks"
-            };
-
-            var filter = new ProfanityFilter(_wordList);
-
-            Assert.AreEqual(3, filter.Count);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void ConstructorThrowsArgumentNullExceptionForNullWordList()
-        {
-            _ = new ProfanityFilter((List<string>)null);
-        }
-
-        [TestMethod]
-        public void ConstructorOverridesProfanityList()
-        {
-            string[] _wordList =
-            {
-                "fuck",
-                "shit",
-                "bollocks"
-            };
-
-            var filter = new ProfanityFilter(new List<string>(_wordList));
-
-            Assert.AreEqual(3, filter.Count);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void AddProfanityThrowsArgumentNullExceptionForNullProfanity()
+        [Test]
+        public void AddProfanity_ThrowsArgumentNullExceptionForNullProfanity()
         {
             var filter = new ProfanityBase();
-            filter.AddProfanity(null);
+            var act = () => filter.AddProfanityWord(null);
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void AddProfanityThrowsArgumentNullExceptionForEmptyProfanityString()
+        [Test]
+        public void AddProfanity_ThrowsArgumentNullExceptionForEmptyProfanityString()
         {
             var filter = new ProfanityBase();
-            filter.AddProfanity(string.Empty);
+            var act = () => filter.AddProfanityWord(string.Empty);
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        public void AddProfanityAddsToList()
+        [Test]
+        public void AddProfanity_AddsToList()
         {
             var filter = new ProfanityFilter();
-            Assert.IsFalse(filter.IsProfanity("fluffy"));
+            Assert.IsFalse(filter.ContainsByWord("fluffy"));
 
-            filter.AddProfanity("fluffy");
-            Assert.IsTrue(filter.IsProfanity("fluffy"));
+            filter.AddProfanityWord("fluffy");
+            Assert.IsTrue(filter.ContainsByWord("fluffy"));
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void AddProfanityThrowsArgumentNullExceptionForNullProfanityArray()
+        [Test]
+        public void AddProfanity_ThrowsArgumentNullExceptionForNullProfanityArray()
         {
             var filter = new ProfanityBase();
-            filter.AddProfanityWords(null);
+            var act = () => filter.AddProfanityWords(null);
+            act.Should().Throw<ArgumentNullException>();
         }
 
-        [TestMethod]
-        public void AddProfanityAddsToProfanityArray()
+        [Test]
+        public void AddProfanity_AddsToProfanityArray()
         {
-            string[] _wordList =
+            var wordList = new[]
             {
                 "fuck",
                 "shit",
@@ -120,15 +77,15 @@ namespace ProfanityFilter.Tests.Unit
             filter.Clear();
             Assert.AreEqual(0, filter.Count);
 
-            filter.AddProfanityWords(new List<string>(_wordList));
+            filter.AddProfanityWords(new List<string>(wordList));
 
             Assert.AreEqual(3, filter.Count);
         }
 
-        [TestMethod]
-        public void AddProfanityAddsToProfanityList()
+        [Test]
+        public void AddProfanity_AddsToProfanityList()
         {
-            string[] _wordList =
+            var wordList = new[]
             {
                 "fuck",
                 "shit",
@@ -140,12 +97,12 @@ namespace ProfanityFilter.Tests.Unit
             filter.Clear();
             Assert.AreEqual(0, filter.Count);
 
-            filter.AddProfanityWords(_wordList);
+            filter.AddProfanityWords(wordList);
 
             Assert.AreEqual(3, filter.Count);
         }
 
-        [TestMethod]
+        [Test]
         public void ReturnCountForDefaultProfanityList()
         {
             var filter = new ProfanityBase();
@@ -154,8 +111,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(count, 0);
         }
 
-        [TestMethod]
-        public void ClearEmptiesProfanityList()
+        [Test]
+        public void Clear_EmptiesProfanityList()
         {
             string[] wordList =
             {
@@ -174,8 +131,8 @@ namespace ProfanityFilter.Tests.Unit
             Assert.AreEqual(0, filter.Count);
         }
 
-        [TestMethod]
-        public void RemoveDeletesAProfanityAndReturnsTrue()
+        [Test]
+        public void RemoveProfanity_DeletesAProfanityAndReturnsTrue()
         {
             string[] wordList =
             {
@@ -187,13 +144,13 @@ namespace ProfanityFilter.Tests.Unit
             filter.AddProfanityWords(wordList);
             Assert.AreEqual(wordList.Length, filter.Count);
 
-            Assert.IsTrue(filter.RemoveProfanity("shit"));
+            Assert.IsTrue(filter.RemoveProfanityWord("shit"));
 
             Assert.AreEqual(wordList.Length - 1, filter.Count);
         }
 
-        [TestMethod]
-        public void RemoveDeletesAProfanityAndIsProfanityIgnoresIt()
+        [Test]
+        public void RemoveProfanity_DeletesAProfanityAndContainsProfanityIgnoresIt()
         {
             string[] wordList =
             {
@@ -203,40 +160,18 @@ namespace ProfanityFilter.Tests.Unit
             };
             var filter = new ProfanityFilter();
             filter.AddProfanityWords(wordList);
-            Assert.IsTrue(filter.IsProfanity("shit"));
-            filter.RemoveProfanity("shit");
+            Assert.IsTrue(filter.ContainsByWord("shit"));
+            filter.RemoveProfanityWord("shit");
 
-            Assert.IsFalse(filter.IsProfanity("shit"));
+            Assert.IsFalse(filter.ContainsByWord("shit"));
         }
 
-        [TestMethod]
-        public void RemoveDeletesAProfanityAndReturnsFalseIfProfanityDoesntExist()
-        {
-            var filter = new ProfanityBase();
-            
-            Assert.IsFalse(filter.RemoveProfanity("fluffy"));
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void RemoveProfanityThrowsArgumentNullExceptionIfListNull()
+        [Test]
+        public void RemoveProfanity_DeletesAProfanityAndReturnsFalseIfProfanityDoesntExist()
         {
             var filter = new ProfanityBase();
 
-            List<string> listOfProfanitiesToRemove = null;
-
-            filter.RemoveProfanity(listOfProfanitiesToRemove);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public void RemoveProfanityThrowsArgumentNullExceptionIfArrayNull()
-        {
-            var filter = new ProfanityBase();
-
-            string[] listOfProfanitiesToRemove = null;
-
-            filter.RemoveProfanity(listOfProfanitiesToRemove);
+            Assert.IsFalse(filter.RemoveProfanityWord("fluffy"));
         }
     }
 }
