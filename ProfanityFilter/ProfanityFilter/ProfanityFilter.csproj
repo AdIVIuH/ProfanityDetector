@@ -23,7 +23,4 @@
         <Optimize>false</Optimize>
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
-    <ItemGroup>
-        <Folder Include="Interfaces\"/>
-    </ItemGroup>
 </Project>
