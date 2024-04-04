@@ -44,7 +44,6 @@ public class AllowList
         _allowListHashSet.Add(NormalizeString(inputToAllowList));
     }
 
-
     /// <summary>
     /// Adds a list of inputs to the profanity allow list. This means a input that is in the allow list
     /// can be ignored. All inputs are treated as case insensitive.

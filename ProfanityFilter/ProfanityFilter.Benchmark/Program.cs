@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Running;
 
 BenchmarkRunner.Run<ProfanityFilterBenchmark>();
- 
+
 public class ProfanityFilterBenchmark
 {
     [Benchmark]
@@ -14,7 +14,7 @@ public class ProfanityFilterBenchmark
 
         return filter.CensorString(clientName);
     }
-    
+
     [Benchmark]
     public string LongStringTest()
     {
