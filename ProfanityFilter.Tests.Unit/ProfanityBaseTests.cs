@@ -48,10 +48,10 @@ namespace ProfanityFilter.Tests.Unit
         public void AddProfanity_AddsToList()
         {
             var filter = new ProfanityFilter();
-            Assert.IsFalse(filter.ContainsByWord("fluffy"));
+            Assert.IsFalse(filter.IsMatchedByWord("fluffy"));
 
             filter.AddProfanityWord("fluffy");
-            Assert.IsTrue(filter.ContainsByWord("fluffy"));
+            Assert.IsTrue(filter.IsMatchedByWord("fluffy"));
         }
 
         [Test]
@@ -160,10 +160,10 @@ namespace ProfanityFilter.Tests.Unit
             };
             var filter = new ProfanityFilter();
             filter.AddProfanityWords(wordList);
-            Assert.IsTrue(filter.ContainsByWord("shit"));
+            Assert.IsTrue(filter.IsMatchedByWord("shit"));
             filter.RemoveProfanityWord("shit");
 
-            Assert.IsFalse(filter.ContainsByWord("shit"));
+            Assert.IsFalse(filter.IsMatchedByWord("shit"));
         }
 
         [Test]

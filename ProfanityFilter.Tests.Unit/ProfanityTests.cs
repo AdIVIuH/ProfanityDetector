@@ -27,7 +27,7 @@ namespace ProfanityFilter.Tests.Unit
     public class ProfanityTests
     {
         [Test]
-        public void ConstructorSetsAllowList()
+        public void Constructor_SetsAllowList()
         {
             var filter = new ProfanityFilter();
             Assert.IsNotNull(filter.AllowList);
@@ -35,33 +35,33 @@ namespace ProfanityFilter.Tests.Unit
 
         [TestCase("arsehole")]
         [TestCase("shitty")]
-        public void ContainsProfanity_ReturnsTrue_ForSwearWord(string swearWord)
+        public void IsMatched_ReturnsTrue_ForSwearWord(string swearWord)
         {
             var filter = CreateProfanityFilter();
-            Assert.IsTrue(filter.ContainsByWord(swearWord));
+            Assert.IsTrue(filter.IsMatched(swearWord));
         }
 
         [TestCase("fluffy")]
         [TestCase("")]
         [TestCase(null)]
-        public void ContainsProfanity_ReturnsFalse_ForNonSwearWord(string nonSwearWord)
+        public void IsMatched_ReturnsFalse_ForNonSwearWord(string nonSwearWord)
         {
             var filter = CreateProfanityFilter();
-            Assert.IsFalse(filter.ContainsByWord(nonSwearWord));
+            Assert.IsFalse(filter.IsMatched(nonSwearWord));
         }
 
         [TestCase("shitty")]
         [TestCase("лох")]
         [TestCase("Лох")]
         [TestCase("лоХ")]
-        public void ContainsProfanity_ReturnsFalse_ForWordOnTheAllowList(string word)
+        public void IsMatched_ReturnsFalse_ForWordOnTheAllowList(string word)
         {
             var filter = CreateProfanityFilter();
-            Assert.IsTrue(filter.ContainsByWord(word));
+            Assert.IsTrue(filter.IsMatched(word));
 
             filter.AllowList.Add(word);
 
-            Assert.IsFalse(filter.ContainsByWord(word));
+            Assert.IsFalse(filter.IsMatched(word));
         }
 
         [TestCase("")]
@@ -69,9 +69,9 @@ namespace ProfanityFilter.Tests.Unit
         public void DetectAllProfanities_ReturnsEmptyList_ForEmptyInput(string input)
         {
             var filter = CreateProfanityFilter();
-            var swearList = filter.DetectAllProfanities(input);
+            var profanities = filter.DetectAllProfanities(input);
 
-            Assert.AreEqual(0, swearList.Count);
+            Assert.AreEqual(0, profanities.Count);
         }
 
         [TestCase("You are a complete twat and a dick.", "twat", "dick")]
@@ -80,10 +80,10 @@ namespace ProfanityFilter.Tests.Unit
         public void DetectAllProfanities_Returns2SwearWords(string input, params string[] expected)
         {
             var filter = CreateProfanityFilter();
-            var swearList = filter.DetectAllProfanities(input);
+            var profanities = filter.DetectAllProfanities(input);
 
-            Assert.AreEqual(expected.Length, swearList.Count);
-            Assert.IsFalse(expected.Except(swearList).Any());
+            Assert.AreEqual(expected.Length, profanities.Count);
+            Assert.IsFalse(expected.Except(profanities).Any());
         }
 
         [TestCase("2 girls 1 cup is my favourite video", "2 girls 1 cup")]
@@ -115,16 +115,16 @@ namespace ProfanityFilter.Tests.Unit
             filter.AllowList.Add("scunthorpe");
             filter.AllowList.Add("penistone");
 
-            var swearList = filter.DetectAllProfanities(
+            var profanities = filter.DetectAllProfanities(
                 sentence:
                 "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
                 removePartialMatches: false);
 
-            Assert.AreEqual(4, swearList.Count);
-            Assert.AreEqual("fucking", swearList[0]);
-            Assert.AreEqual("cock", swearList[1]);
-            Assert.AreEqual("fuck", swearList[2]);
-            Assert.AreEqual("shit", swearList[3]);
+            Assert.AreEqual(4, profanities.Count);
+            Assert.AreEqual("fucking", profanities[0]);
+            Assert.AreEqual("cock", profanities[1]);
+            Assert.AreEqual("fuck", profanities[2]);
+            Assert.AreEqual("shit", profanities[3]);
         }
 
         [Test]
@@ -134,15 +134,15 @@ namespace ProfanityFilter.Tests.Unit
             filter.AllowList.Add("scunthorpe");
             filter.AllowList.Add("penistone");
 
-            var swearList = filter.DetectAllProfanities(
+            var profanities = filter.DetectAllProfanities(
                 sentence:
                 "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
                 removePartialMatches: true);
 
-            Assert.AreEqual(3, swearList.Count);
-            Assert.AreEqual("cock", swearList[1]);
-            Assert.AreEqual("fucking", swearList[0]);
-            Assert.AreEqual("shit", swearList[2]);
+            Assert.AreEqual(3, profanities.Count);
+            Assert.AreEqual("cock", profanities[1]);
+            Assert.AreEqual("fucking", profanities[0]);
+            Assert.AreEqual("shit", profanities[2]);
         }
 
         [Test]
@@ -173,7 +173,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesMultipleScunthorpes()
+        public void DetectAllProfanities_MultipleScunthorpes()
         {
             var filter = CreateProfanityFilter();
 
@@ -183,7 +183,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesMultipleScunthorpesSingleCunt()
+        public void DetectAllProfanities_MultipleScunthorpes_SingleCunt()
         {
             var filter = CreateProfanityFilter();
 
@@ -194,7 +194,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesMultipleScunthorpesMultiCunt()
+        public void DetectAllProfanities_MultipleScunthorpesMultiCunt()
         {
             var filter = CreateProfanityFilter();
 
@@ -205,7 +205,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesScunthorpePenistone()
+        public void DetectAllProfanities_ScunthorpePenistone()
         {
             var filter = CreateProfanityFilter();
 
@@ -215,7 +215,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesScunthorpePenistoneOneKnob()
+        public void DetectAllProfanities_ScunthorpePenistone_OneKnob()
         {
             var filter = CreateProfanityFilter();
 
@@ -226,7 +226,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesLongerSentence()
+        public void DetectAllProfanities_LongerSentence()
         {
             var filter = CreateProfanityFilter();
 
@@ -253,7 +253,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void DetectAllProfanitiesFor_EmptyString()
+        public void DetectAllProfanities_ForEmptyString()
         {
             var filter = CreateProfanityFilter();
 
@@ -263,7 +263,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void CensoredString_ReturnsStringWithProfanities_BleepedOut()
+        public void CensorString_ReturnsStringWithProfanities_BleepedOut()
         {
             var filter = CreateProfanityFilter();
             filter.AllowList.Add("scunthorpe");
@@ -294,7 +294,7 @@ namespace ProfanityFilter.Tests.Unit
         [TestCase("ScUnThOrPe", "ScUnThOrPe")]
         [TestCase("ScUnThOrPePeNiStOnE", "ScUnThOrPePeNiStOnE")]
         [TestCase("scunthorpe", "scunthorpe")]
-        public void CensoredString_ReturnsStringWithProfanities_BleepedOutNoAllowList(string input, string expected)
+        public void CensorString_ReturnsStringWithProfanities_BleepedOutNoAllowList(string input, string expected)
         {
             var filter = CreateProfanityFilter();
             var censored = filter.CensorString(input);
@@ -303,7 +303,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void CensoredString_ReturnsStringDoubleCunt()
+        public void CensorString_ReturnsStringDoubleCunt()
         {
             var filter = CreateProfanityFilter();
 
@@ -319,7 +319,7 @@ namespace ProfanityFilter.Tests.Unit
         [TestCase("Выдать лоху из лохнесса заказ", "Выдать **** из лохнесса заказ")]
         // [TestCase("scunthorpe cunt", "scunthorpe ****")]
         // [TestCase("cunt scunthorpe cunt scunthorpe cunt", "**** scunthorpe **** scunthorpe ****")]
-        public void CensoredString_ReturnsString_WithDoubleScunthorpeBasedDoubleCunt(string input, string expected)
+        public void CensorString_ReturnsString_WithDoubleScunthorpeBasedDoubleCunt(string input, string expected)
         {
             var filter = CreateProfanityFilter();
             var censored = filter.CensorString(input);
@@ -335,7 +335,7 @@ namespace ProfanityFilter.Tests.Unit
             "\" \"\"\"\"\" \" \"\"\", is my favourite \"\"\"\"\"\"\"\" video.")]
         [TestCase("2 girls 1 cup, is my favourite twatting video.", '!',
             "! !!!!! ! !!!, is my favourite !!!!!!!! video.")]
-        public void CensoredString_ReturnsStringWithProfanities_WithDifferentCharacter(string input,
+        public void CensorString_ReturnsStringWithProfanities_WithDifferentCharacter(string input,
             char censorCharacter, string expected)
         {
             var filter = CreateProfanityFilter();
@@ -345,7 +345,7 @@ namespace ProfanityFilter.Tests.Unit
         }
 
         [Test]
-        public void CensoredString_ReturnsEmptyString()
+        public void CensorString_ReturnsEmptyString()
         {
             var filter = CreateProfanityFilter();
 
@@ -357,7 +357,7 @@ namespace ProfanityFilter.Tests.Unit
 
         [TestCase("     ", "     ")]
         [TestCase("Hello, I am a fish.", "Hello, I am a fish.")]
-        public void CensoredString_ReturnsString_WithNoCensorship(string input, string expected)
+        public void CensorString_ReturnsString_WithNoCensorship(string input, string expected)
         {
             var filter = CreateProfanityFilter();
             var censored = filter.CensorString(input);
@@ -368,7 +368,7 @@ namespace ProfanityFilter.Tests.Unit
         [TestCase("!@£$*&^&$%^$£%£$@£$£@$£$%%^", "!@£$*&^&$%^$£%£$@£$£@$£$%%^")]
         [TestCase("     ", "     ")]
         [TestCase("Hello you little fuck ", "Hello you little **** ")]
-        public void CensoredString_ReturnsCensoredString(string input, string expected)
+        public void CensorString_ReturnsCensoredString(string input, string expected)
         {
             var filter = CreateProfanityFilter();
             var censored = filter.CensorString(input);
@@ -381,6 +381,7 @@ namespace ProfanityFilter.Tests.Unit
         [TestCase("You are a 123motherfucker", "You are a ***************")]
         [TestCase("You are a 123motherfucker123", "You are a ******************")]
         [TestCase("motherfucker1", "*************")]
+        [TestCase("motherfucker1.", "*************.")]
         [TestCase("motherfucker1  ", "*************  ")]
         [TestCase("  motherfucker1", "  *************")]
         [TestCase("  motherfucker1  ", "  *************  ")]
@@ -407,7 +408,7 @@ namespace ProfanityFilter.Tests.Unit
 
         [TestCase("")]
         [TestCase(null)]
-        public void CensoredString_ReturnsEmptyString(string input)
+        public void CensorString_ReturnsEmptyString(string input)
         {
             var filter = CreateProfanityFilter();
 
@@ -421,67 +422,67 @@ namespace ProfanityFilter.Tests.Unit
         [TestCase("")]
         [TestCase(" ")]
         [TestCase("  ")]
-        public void ContainsProfanity_ReturnsFalse_IfNullOrEmptyInputString(string input)
+        public void IsMatched_ReturnsFalse_IfNullOrEmptyInputString(string input)
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord(input);
+            var result = filter.IsMatched(input);
 
             Assert.IsFalse(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsTrue_WhenProfanityExists()
+        public void IsMatched_ReturnsTrue_WhenProfanityExists()
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord("Scunthorpe");
+            var result = filter.IsMatched("Scunthorpe");
 
             Assert.IsTrue(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsTrue_WhenMultipleProfanitiesExist()
+        public void IsMatched_ReturnsTrue_WhenMultipleProfanitiesExist()
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord("Scuntarsefuckhorpe");
+            var result = filter.IsMatched("Scuntarsefuckhorpe");
 
             Assert.IsTrue(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsFalse_WhenMultipleProfanitiesExistAndAreAllowed()
+        public void IsMatched_ReturnsFalse_WhenMultipleProfanitiesExistAndAreAllowed()
         {
             var filter = CreateProfanityFilter();
             filter.AllowList.Add("cunt");
             filter.AllowList.Add("arse");
 
-            var result = filter.ContainsByWord("Scuntarsehorpe");
+            var result = filter.IsMatched("Scuntarsehorpe");
 
             Assert.IsFalse(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsFalse_WhenProfanityDoesNotExist()
+        public void IsMatched_ReturnsFalse_WhenProfanityDoesNotExist()
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord("Ireland");
+            var result = filter.IsMatched("Ireland");
 
             Assert.IsFalse(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsFalse_WhenProfanityIsAaa()
+        public void IsMatched_ReturnsFalse_WhenProfanityIsAaa()
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord("aaa");
+            var result = filter.IsMatched("aaa");
 
             Assert.IsFalse(result);
         }
 
         [Test]
-        public void ContainsProfanity_ReturnsTrue_WhenProfanityIsADollarDollar()
+        public void IsMatched_ReturnsTrue_WhenProfanityIsADollarDollar()
         {
             var filter = CreateProfanityFilter();
-            var result = filter.ContainsByWord("a$$");
+            var result = filter.IsMatched("a$$");
 
             Assert.IsTrue(result);
         }

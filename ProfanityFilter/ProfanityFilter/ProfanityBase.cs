@@ -89,6 +89,16 @@ namespace ProfanityFilter
         protected static string WordToPattern(string word) =>
             $@"(\b{word.ToLower(CultureInfo.InvariantCulture)}\b)";
 
+        protected static string NormalizeInput(string input)
+        {
+            // }|{ -> ж
+            var trimmed = input.Trim();
+            var noPunctuation = Regex.Replace(trimmed, @"[^\w\s]", "");
+            var lowerCased = noPunctuation.ToLower(CultureInfo.InvariantCulture);
+            var result = lowerCased;
+            return result;
+        }
+
         /// <summary>
         /// Remove a profanity from the current loaded list of profanities.
         /// </summary>
@@ -98,8 +108,8 @@ namespace ProfanityFilter
         {
             if (string.IsNullOrEmpty(word))
                 throw new ArgumentNullException(nameof(word));
-
-            return ProfanityWords.Remove(word.ToLower(CultureInfo.InvariantCulture));
+            var normalizedInput = NormalizeInput(word);
+            return ProfanityWords.Remove(normalizedInput);
         }
 
         /// <summary>
@@ -112,7 +122,8 @@ namespace ProfanityFilter
             if (string.IsNullOrEmpty(pattern))
                 throw new ArgumentNullException(nameof(pattern));
 
-            return ProfanityPatterns.Remove(pattern.ToLower(CultureInfo.InvariantCulture));
+            var normalizedInput = NormalizeInput(pattern);
+            return ProfanityPatterns.Remove(normalizedInput);
         }
 
         /// <summary>
@@ -128,16 +139,7 @@ namespace ProfanityFilter
         /// Return the number of profanities in the system.
         /// </summary>
         public int Count => ProfanityPatterns.Count + ProfanityWords.Count;
-
-        public bool Contains(string term, bool usePattern = false)
-        {
-            if (string.IsNullOrWhiteSpace(term)) return false;
-
-            return usePattern
-                ? ContainsByPattern(term)
-                : ContainsByWord(term);
-        }
-
+        
         /// <summary>
         /// Check whether a given term matches an entry in the profanity list. ContainsProfanity will first
         /// check if the word exists on the allow list. If it is on the allow list, then false
@@ -145,46 +147,55 @@ namespace ProfanityFilter
         /// </summary>
         /// <param name="pattern">Pattern to check.</param>
         /// <returns>True if the term contains a profanity, False otherwise.</returns>
-        public virtual bool ContainsByPattern(string pattern) =>
-            !string.IsNullOrWhiteSpace(pattern)
-            && ProfanityPatterns.Any(p => IsProfanityPatternMatched(pattern, p));
-
-        public virtual bool ContainsByWord(string word) =>
-            !string.IsNullOrWhiteSpace(word)
-            && ProfanityWords.Contains(word.ToLower(CultureInfo.InvariantCulture));
-
-        private static bool IsProfanityPatternMatched(string term, string pattern)
+        public virtual bool IsMatchedByPattern(string input)
         {
-            var lowerCaseTerm = term.ToLower(CultureInfo.InvariantCulture);
-            return Regex.IsMatch(lowerCaseTerm, pattern);
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+            var normalizedInput = NormalizeInput(input);
+        
+            return ProfanityPatterns.Any(p => IsMatchedByPattern(normalizedInput, p));
         }
 
-        protected IReadOnlyList<string> GetMatchedProfanities(string sentence, bool onlyExactMatch = false, bool includePatterns = true)
+        public virtual bool IsMatchedByWord(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+            var normalizedInput = NormalizeInput(input);
+
+            return ProfanityWords.Contains(normalizedInput);
+        }
+
+        protected bool IsMatchedByPattern(string term, string pattern)
+        {
+            var normalizedInput = NormalizeInput(term);
+            return ProfanityPatterns.Contains(pattern) && Regex.IsMatch(normalizedInput, pattern);
+        }
+
+        protected IReadOnlyList<string> GetMatchedProfanities(string sentence, bool includePartialMatch = true,
+            bool includePatterns = true)
         {
             var matchedProfanities = new List<string>();
-            var lowerCaseSentence = sentence.ToLower(CultureInfo.InvariantCulture);
+            var normalizedInput = NormalizeInput(sentence);
+            var partialMatchedProfanityWords = ProfanityWords
+                .Where(profanityWord => normalizedInput.Contains(profanityWord))
+                .ToList();
+            matchedProfanities.AddRange(partialMatchedProfanityWords);
             
-            // ReSharper disable once ConvertIfStatementToSwitchStatement
-            if (onlyExactMatch && ContainsByWord(lowerCaseSentence))
-                matchedProfanities.Add(lowerCaseSentence);
-            
-            if(!onlyExactMatch)
-            {
-                var partialMatchedProfanityWords = ProfanityWords
-                    .Where(profanityWord => lowerCaseSentence.Contains(profanityWord))
-                    .ToList();
-                matchedProfanities.AddRange(partialMatchedProfanityWords);
-            }
 
             // ReSharper disable once InvertIf
             if (includePatterns)
             {
                 var matchedPatterns = ProfanityPatterns
-                    .Where(pattern => IsProfanityPatternMatched(lowerCaseSentence, pattern))
+                    .Where(pattern => IsMatchedByPattern(normalizedInput, pattern))
                     .ToList();
                 matchedProfanities.AddRange(matchedPatterns);
             }
 
+            if (!includePartialMatch)
+            {
+                matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));
+            }
+            
             return matchedProfanities
                 .Distinct()
                 .ToList()
