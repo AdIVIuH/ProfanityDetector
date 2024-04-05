@@ -106,7 +106,7 @@ public class ProfanityFilter : ProfanityBase
     {
         if (string.IsNullOrWhiteSpace(pattern))
             return false;
-        var normalizedInput = NormalizeInput(pattern);
+        var normalizedInput = NormalizeInput(pattern, ignoreNumbers: true);
         // ReSharper disable once ConvertIfStatementToReturnStatement
         if (AllowList.Contains(normalizedInput))
             return false;
@@ -125,7 +125,7 @@ public class ProfanityFilter : ProfanityBase
     {
         if (string.IsNullOrWhiteSpace(term)) return false;
 
-        var normalizedInput = NormalizeInput(term);
+        var normalizedInput = NormalizeInput(term, ignoreNumbers: true);
         // ReSharper disable once ConvertIfStatementToReturnStatement
         if (AllowList.Contains(normalizedInput))
             return false;
@@ -154,17 +154,19 @@ public class ProfanityFilter : ProfanityBase
     /// For a given sentence, look for the specified profanity. If it is found, look to see
     /// if it is part of a containing word. If it is, then return the containing work and the start
     /// and end positions of that word in the string.
-    ///
+    /// 
     /// For example, if the string contains "scunthorpe" and the passed in profanity is "cunt",
     /// then this method will find "cunt" and work out that it is part of an enclosed word.
     /// </summary>
     /// <param name="toCheck">Sentence to check.</param>
     /// <param name="profanity">Profanity to look for.</param>
+    /// <param name="ignoreNumbers"></param>
     /// <returns>Tuple of the following format (start character, end character, found enclosed word).
     /// If no enclosed word is found then return null.</returns>
     private static IEnumerable<CompleteWord> GetCompleteWords(
         string toCheck,
-        string profanity)
+        string profanity,
+        bool ignoreNumbers = false)
     {
         if (string.IsNullOrEmpty(toCheck)) yield break;
 
@@ -173,7 +175,7 @@ public class ProfanityFilter : ProfanityBase
 
         foreach (var word in words)
         {
-            var normalizedWord = NormalizeInput(word);
+            var normalizedWord = NormalizeInput(word, ignoreNumbers);
             if (!handledWords.Add(normalizedWord)) continue;
 
             var isMatched = Regex.IsMatch(normalizedWord, profanity);
@@ -185,7 +187,7 @@ public class ProfanityFilter : ProfanityBase
                 var endWordIndex = FindEndWordIndex(toCheck, j);
                 var wholeWordLength = endWordIndex - startWordIndex;
                 var wholeWord = toCheck.Substring(startWordIndex, wholeWordLength);
-                handledWords.Add(wholeWord);
+                handledWords.Add(wholeWord.ToLower());
                 yield return new CompleteWord(
                     StartWordIndex: startWordIndex,
                     EndWordIndex: endWordIndex,
@@ -227,6 +229,7 @@ public class ProfanityFilter : ProfanityBase
     {
         var appliedProfanitiesResult = new List<string>();
         var censored = sentence;
+
 
         foreach (var profanity in profanities.OrderByDescending(x => x.Length))
         {
@@ -273,17 +276,11 @@ public class ProfanityFilter : ProfanityBase
     {
         var censored = new StringBuilder(sentence);
         var appliedProfanities = new HashSet<string>();
-        // TODO это может убрать слова типа л0х и уже не пройдут по паттерну
-        var findNumbersRegex = new Regex(@"[\d-]");
 
-        foreach (var result in GetCompleteWords(toCheck: censored.ToString(), profanity))
+        foreach (var result in GetCompleteWords(toCheck: censored.ToString(), profanity, ignoreNumbers))
         {
             var (startWordIndex, endWordIndex, wholeWord) = result;
-            var filteredWord = wholeWord;
-            if (ignoreNumbers)
-                filteredWord = findNumbersRegex.Replace(wholeWord, string.Empty);
-
-            if (!HasProfanity(filteredWord, profanity)) continue;
+            if (!HasProfanity(wholeWord, profanity)) continue;
 
             appliedProfanities.Add(profanity);
             for (var i = startWordIndex; i < endWordIndex; i++)

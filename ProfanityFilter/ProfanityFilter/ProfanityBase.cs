@@ -87,12 +87,18 @@ public class ProfanityBase
             AddProfanityWord(word);
     }
 
-    protected static string NormalizeInput(string input)
+    protected static string NormalizeInput(string input, bool ignoreNumbers = false)
     {
         // TODO add gomogliths }|{ -> ж
-        return input.Trim()
+        var result = input.Trim()
             .RemovePunctuation()
             .ToLower(CultureInfo.InvariantCulture);
+        
+        if (ignoreNumbers) 
+            // TODO это может убрать слова типа л0х -> лх и они уже не пройдут по паттерну
+            result = Regex.Replace(result, @"[\d-]",string.Empty);
+                        
+        return result;
     }
 
     /// <summary>
@@ -175,7 +181,7 @@ public class ProfanityBase
         }
 
         // TODO Возможно тут есть проблема с тем, что не будем обрабатывать все необходимые плохие слова
-        if (!includePartialMatch)
+        if (!includePartialMatch && matchedProfanities.Count > 1)
             matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));
 
         return matchedProfanities
