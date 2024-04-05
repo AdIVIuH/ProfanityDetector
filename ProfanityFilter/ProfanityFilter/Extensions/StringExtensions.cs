@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProfanityFilter.Extensions;
 
@@ -28,8 +29,15 @@ internal static class StringExtensions
                 wordBuilder.Append(symbol);
             }
         }
-        
+
         yield return wordBuilder.ToString();
+    }
+
+    internal static string RemovePunctuation(this string input)
+    {
+        var findPunctuationRegex = new Regex(@"[^\w\s]");
+        var noPunctuation = findPunctuationRegex.Replace(input, string.Empty);
+        return noPunctuation;
     }
 
     /// <summary>

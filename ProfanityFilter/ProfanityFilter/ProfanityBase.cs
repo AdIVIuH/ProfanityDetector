@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ProfanityFilter.Extensions;
 
 namespace ProfanityFilter;
 
@@ -89,12 +90,9 @@ public class ProfanityBase
     protected static string NormalizeInput(string input)
     {
         // TODO add gomogliths }|{ -> ж
-        var trimmed = input.Trim();
-        var findPunctuationRegex = new Regex(@"[^\w\s]");
-        var noPunctuation = findPunctuationRegex.Replace(trimmed, string.Empty);
-        var lowerCased = noPunctuation.ToLower(CultureInfo.InvariantCulture);
-        var result = lowerCased;
-        return result;
+        return input.Trim()
+            .RemovePunctuation()
+            .ToLower(CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -176,6 +174,7 @@ public class ProfanityBase
             matchedProfanities.AddRange(matchedPatterns);
         }
 
+        // TODO Возможно тут есть проблема с тем, что не будем обрабатывать все необходимые плохие слова
         if (!includePartialMatch)
             matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));
 

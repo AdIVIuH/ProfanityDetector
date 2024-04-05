@@ -31,7 +31,7 @@ namespace ProfanityFilter;
 /// <summary>
 ///
 /// This class will detect profanity and racial slurs contained within some text and return an indication flag.
-/// All words are treated as case insensitive.
+/// All words are treated as case-insensitive.
 ///
 /// </summary>
 public class ProfanityFilter : ProfanityBase
@@ -185,7 +185,7 @@ public class ProfanityFilter : ProfanityBase
                 var endWordIndex = FindEndWordIndex(toCheck, j);
                 var wholeWordLength = endWordIndex - startWordIndex;
                 var wholeWord = toCheck.Substring(startWordIndex, wholeWordLength);
-
+                handledWords.Add(wholeWord);
                 yield return new CompleteWord(
                     StartWordIndex: startWordIndex,
                     EndWordIndex: endWordIndex,
@@ -273,6 +273,7 @@ public class ProfanityFilter : ProfanityBase
     {
         var censored = new StringBuilder(sentence);
         var appliedProfanities = new HashSet<string>();
+        // TODO это может убрать слова типа л0х и уже не пройдут по паттерну
         var findNumbersRegex = new Regex(@"[\d-]");
 
         foreach (var result in GetCompleteWords(toCheck: censored.ToString(), profanity))
