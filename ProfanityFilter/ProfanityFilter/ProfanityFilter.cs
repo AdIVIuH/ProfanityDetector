@@ -57,7 +57,7 @@ public class ProfanityFilter : ProfanityBase
     /// <param name="sentence">The sentence to check for profanities.</param>
     /// <param name="removePartialMatches">Remove duplicate partial matches.</param>
     /// <returns>A read only list of detected profanities.</returns>
-    public IReadOnlyList<string> DetectAllProfanities(string sentence, bool removePartialMatches = false)
+    public IReadOnlyList<string> DetectWordsWithProfanities(string sentence, bool removePartialMatches = false)
     {
         if (string.IsNullOrEmpty(sentence))
             return new List<string>().AsReadOnly();
@@ -67,12 +67,25 @@ public class ProfanityFilter : ProfanityBase
             normalizedInput,
             includePartialMatch: !removePartialMatches,
             includePatterns: true);
-        var excludedAllowList = FilterByAllowList(matchedProfanities);
-        var censorResult = CensorStringByProfanityList(sentence, excludedAllowList,
+        var censorResult = CensorStringByProfanityList(sentence, matchedProfanities,
             censorCharacter: DefaultCensorString,
             ignoreNumbers: true);
 
         return censorResult.AppliedProfanities;
+    }
+
+    protected override IReadOnlyList<string> GetMatchedProfanities(string sentence,
+        bool includePartialMatch = true,
+        bool includePatterns = true)
+    {
+        var matchedProfanities = base.GetMatchedProfanities(
+            sentence,
+            includePartialMatch: includePartialMatch,
+            includePatterns: includePatterns);
+        
+        matchedProfanities = FilterByAllowList(matchedProfanities);
+
+        return matchedProfanities;
     }
 
     /// <summary>
@@ -90,7 +103,7 @@ public class ProfanityFilter : ProfanityBase
         if (string.IsNullOrEmpty(sentence) || string.IsNullOrWhiteSpace(sentence))
             return sentence;
 
-        var profanities = DetectAllProfanities(sentence, removePartialMatches: false);
+        var profanities = DetectWordsWithProfanities(sentence, removePartialMatches: false);
         var censorResult = CensorStringByProfanityList(sentence, profanities, censorCharacter, ignoreNumbers);
         return censorResult.CensoredSentence;
     }
@@ -100,13 +113,13 @@ public class ProfanityFilter : ProfanityBase
     /// check if the word exists on the allow list. If it is on the allow list, then false
     /// will be returned.
     /// </summary>
-    /// <param name="pattern">Pattern to check.</param>
+    /// <param name="input">Pattern to check.</param>
     /// <returns>True if the term contains a profanity, False otherwise.</returns>
-    public override bool HasProfanityByPattern(string pattern)
+    public override bool HasProfanityByPattern(string input)
     {
-        if (string.IsNullOrWhiteSpace(pattern))
+        if (string.IsNullOrWhiteSpace(input))
             return false;
-        var normalizedInput = NormalizeInput(pattern, ignoreNumbers: true);
+        var normalizedInput = NormalizeInput(input, ignoreNumbers: true);
         // ReSharper disable once ConvertIfStatementToReturnStatement
         if (AllowList.Contains(normalizedInput))
             return false;
