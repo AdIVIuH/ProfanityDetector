@@ -1745,6 +1745,7 @@ public static class ProfanitiesDictionary
         @"\bкери бобо$\b",
         @"\bсиях$\b",
         @"\bсаг$\b",
+        // @"\b. girls . cup\b",
     };
 
     public static readonly string[] AllowList =

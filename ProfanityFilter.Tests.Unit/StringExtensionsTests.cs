@@ -53,12 +53,12 @@ public class StringExtensionsTests
     [TestCase("\"слово", "слово")]
     [TestCase("слово\"", "слово")]
     [TestCase("\"слово\"", "слово")]
-    [TestCase("`слово", "слово")]
-    [TestCase("слово`", "слово")]
-    [TestCase("`слово`", "слово")]
     [TestCase("«слово", "слово")]
     [TestCase("слово»", "слово")]
     [TestCase("«слово»", "слово")]
+    [TestCase("`слово", "слово")]
+    [TestCase("слово`", "слово")]
+    [TestCase("`слово`", "слово")]
     public void ExtractWords_ShouldReturnStringWithoutQuotes(string input, string expected)
     {
         var result = input.ExtractWords();

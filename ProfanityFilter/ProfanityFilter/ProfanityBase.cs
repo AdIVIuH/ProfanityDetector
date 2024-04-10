@@ -19,10 +19,12 @@ SOFTWARE.
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Caching.Memory;
 using ProfanityFilter.Extensions;
 
 namespace ProfanityFilter;
@@ -30,7 +32,9 @@ namespace ProfanityFilter;
 public class ProfanityBase
 {
     protected readonly HashSet<string> ProfanityPatterns;
-    protected readonly HashSet<string> ProfanityWords;
+    protected readonly HashSet<string> Profanities;
+    private readonly ConcurrentDictionary<string, string[]> _extractedWordsDictionary = new();
+    private readonly IMemoryCache _cache;
 
     /// <summary>
     /// Constructor that initializes the standard profanity list.
@@ -38,7 +42,9 @@ public class ProfanityBase
     public ProfanityBase()
     {
         ProfanityPatterns = new HashSet<string>();
-        ProfanityWords = new HashSet<string>();
+        Profanities = new HashSet<string>();
+        var memoryCacheOptions = new MemoryCacheOptions();
+        _cache = new MemoryCache(memoryCacheOptions);
     }
 
     /// <summary>
@@ -49,7 +55,7 @@ public class ProfanityBase
     {
         if (string.IsNullOrEmpty(profanityWord)) throw new ArgumentNullException(nameof(profanityWord));
 
-        ProfanityWords.Add(profanityWord);
+        Profanities.Add(profanityWord);
     }
 
     /// <summary>
@@ -87,19 +93,75 @@ public class ProfanityBase
             AddProfanityWord(word);
     }
 
-    protected static string NormalizeInput(string input, bool ignoreNumbers = false)
+    protected internal string NormalizeInput(string input, bool ignoreNumbers = false)
     {
         // TODO add gomogliths }|{ -> ж
-        var extractedWords = input.Trim()
-            .ToLower(CultureInfo.InvariantCulture)
-            .ExtractWords();
-        var result = string.Join(' ', extractedWords);
+
+        var extractedWords = GetExtractedWordsOrCache(input);
+        var resultWords = ReplaceGomogliths(extractedWords);
+         
+        if (ignoreNumbers)
+            resultWords = SelectOnlyLetters(resultWords);
         
-        if (ignoreNumbers) 
-            // TODO это может убрать слова типа л0х -> лх и они уже не пройдут по паттерну
-            result = Regex.Replace(result, @"[\d-]",string.Empty);
-                        
+        var joinedWords = string.Join(' ', resultWords);
+        var result = joinedWords.Trim().ToLower(CultureInfo.InvariantCulture);
+
         return result;
+    }
+
+    protected string GetNormalizedInputOrCache(string input, bool ignoreNumbers = false)
+    {
+        var memoryCacheEntryOptions = new MemoryCacheEntryOptions
+        {
+            // TODO какой интервал экспирации лучше проставить?
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100000)
+        };
+
+        return _cache.GetOrCreate(CacheKeys.GetKeyForNormalizeInput(input), entry =>
+        {
+            entry.SetOptions(memoryCacheEntryOptions);
+            var normalizedInput = NormalizeInput(input, ignoreNumbers);
+            entry.SetValue(normalizedInput);
+            // add cache for normalized string
+            _cache.Set(CacheKeys.GetKeyForNormalizeInput(normalizedInput), normalizedInput, memoryCacheEntryOptions);
+            return normalizedInput;
+        });
+    }
+
+    protected string[] GetExtractedWordsOrCache(string input)
+    {
+        var memoryCacheEntryOptions = new MemoryCacheEntryOptions
+        {
+            // TODO какой интервал экспирации лучше проставить?
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100000)
+        };
+
+        return _cache.GetOrCreate(CacheKeys.GetKeyForExtractWords(input), entry =>
+        {
+            entry.SetOptions(memoryCacheEntryOptions);
+            var extractedWords = input.ExtractWords().ToArray();
+            entry.SetValue(extractedWords);
+            return extractedWords;
+        });
+    }
+
+    private IEnumerable<string> ReplaceGomogliths(IEnumerable<string> words)
+    {
+        foreach (var word in words)
+            // TODO add logic here
+            yield return word;
+    }
+
+    private IEnumerable<string> SelectOnlyLetters(IEnumerable<string> words) =>
+        words.Select(SelectOnlyLetters);
+
+    private string SelectOnlyLetters(string word)
+    {
+        // TODO add logic here
+        var isContainsLettersRegex = new Regex("[a-zA-Z]+");
+        return isContainsLettersRegex.IsMatch(word) 
+            ? isContainsLettersRegex.Match(word).Value 
+            : word;
     }
 
     /// <summary>
@@ -112,8 +174,8 @@ public class ProfanityBase
         if (string.IsNullOrEmpty(wordOrPattern))
             throw new ArgumentNullException(nameof(wordOrPattern));
 
-        var normalizedInput = NormalizeInput(wordOrPattern);
-        return ProfanityWords.Remove(normalizedInput) || ProfanityPatterns.Remove(normalizedInput);
+        var normalizedInput = GetNormalizedInputOrCache(wordOrPattern, ignoreNumbers: true);
+        return Profanities.Remove(normalizedInput) || ProfanityPatterns.Remove(normalizedInput);
     }
 
     /// <summary>
@@ -122,13 +184,13 @@ public class ProfanityBase
     public void Clear()
     {
         ProfanityPatterns.Clear();
-        ProfanityWords.Clear();
+        Profanities.Clear();
     }
 
     /// <summary>
     /// Return the number of profanities in the system.
     /// </summary>
-    public int Count => ProfanityPatterns.Count + ProfanityWords.Count;
+    public int Count => ProfanityPatterns.Count + Profanities.Count;
 
     /// <summary>
     /// Check whether a given term matches an entry in the profanity list. ContainsProfanity will first
@@ -141,7 +203,7 @@ public class ProfanityBase
     {
         if (string.IsNullOrWhiteSpace(input))
             return false;
-        var normalizedInput = NormalizeInput(input);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
 
         return ProfanityPatterns.Any(p => HasProfanityByPattern(normalizedInput, p));
     }
@@ -150,25 +212,67 @@ public class ProfanityBase
     {
         if (string.IsNullOrWhiteSpace(term))
             return false;
-        var normalizedInput = NormalizeInput(term);
+        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
 
-        return ProfanityWords.Contains(normalizedInput);
+        return Profanities.Any(profanity => HasProfanityByTerm(normalizedInput, profanity));
+    }
+
+    protected bool HasProfanityByTerm(string term, string targetProfanity)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+            return false;
+        // TODO "son of a bitch" -> "son.of,a?bitch"
+        if (!Profanities.Contains(targetProfanity))
+            return false;
+
+        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
+
+        if (normalizedInput == targetProfanity)
+            return true;
+
+        var inputContainsProfanity = normalizedInput.Contains(targetProfanity);
+        var profanityParts = targetProfanity.Split(' ');
+        if (profanityParts.Length == 1)
+            return inputContainsProfanity &&
+                   // TODO это может сильно влиять на производительность!
+                   GetExtractedWordsOrCache(normalizedInput).Contains(targetProfanity);
+
+        return inputContainsProfanity;
     }
 
     protected bool HasProfanityByPattern(string term, string pattern)
     {
-        var normalizedInput = NormalizeInput(term);
+        if (string.IsNullOrWhiteSpace(term))
+            return false;
+        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
         return ProfanityPatterns.Contains(pattern) && Regex.IsMatch(normalizedInput, pattern);
     }
+
+    /// <summary>
+    /// Check whether a given input matches an entry in the profanity list. 
+    /// </summary>
+    /// <param name="input">Term to check.</param>
+    /// <returns>True if the term contains a profanity, False otherwise.</returns>
+    public bool HasAnyProfanities(string input) =>
+        HasProfanityByTerm(input) || HasProfanityByPattern(input);
+
+    /// <summary>
+    /// Check whether a given input matches an entry in the profanity list. 
+    /// </summary>
+    /// <param name="input">Term to check.</param>
+    /// <param name="profanity">Profanity to check</param>
+    /// <returns>True if the term contains a profanity, False otherwise.</returns>
+    protected bool HasProfanity(string input, string profanity) =>
+        HasProfanityByTerm(input) || HasProfanityByPattern(input, profanity);
 
     protected virtual IReadOnlyList<string> GetMatchedProfanities(string sentence, bool includePartialMatch = true,
         bool includePatterns = true)
     {
         var matchedProfanities = new List<string>();
-        var normalizedInput = NormalizeInput(sentence);
-        var partialMatchedProfanityWords = ProfanityWords
+        var normalizedInput = GetNormalizedInputOrCache(sentence, ignoreNumbers: true);
+        var partialMatchedProfanityWords = Profanities
             // TODO "son of a bitch" -> "son.of,a?bitch"
-            .Where(profanity => normalizedInput.Contains(profanity.Trim()))
+            .Where(profanity => HasProfanityByTerm(normalizedInput, profanity))
             .ToList();
         matchedProfanities.AddRange(partialMatchedProfanityWords);
 
@@ -180,6 +284,7 @@ public class ProfanityBase
             matchedProfanities.AddRange(matchedPatterns);
         }
 
+        // TODO Нужны тесты
         // TODO Возможно тут есть проблема с тем, что не будем обрабатывать все необходимые плохие слова
         if (!includePartialMatch && matchedProfanities.Count > 1)
             matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));

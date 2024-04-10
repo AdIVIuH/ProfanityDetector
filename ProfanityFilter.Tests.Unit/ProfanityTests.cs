@@ -57,6 +57,7 @@ public class ProfanityTests
         Assert.IsFalse(expected.Except(profanities).Any());
     }
 
+    [TestCase("2 girls 1 cup and son of a bitch", "2 girls 1 cup", "son of a bitch")]
     [TestCase("2 girls 1 cup is my favourite video", "2 girls 1 cup")]
     [TestCase("2 girls 1 cup is my favourite twatting video", "2 girls 1 cup", "twatting")]
     public void DetectWordsWithProfanities_ReturnsSwearPhrases(string input, params string[] expected)
@@ -64,8 +65,8 @@ public class ProfanityTests
         var filter = CreateProfanityFilter();
         var swearList = filter.DetectWordsWithProfanities(input);
 
-        Assert.AreEqual(expected.Length, swearList.Count);
-        Assert.IsFalse(expected.Except(swearList).Any());
+        swearList.Count.Should().Be(expected.Length);
+        swearList.Except(expected).Should().BeEmpty();
     }
 
     [Test]
