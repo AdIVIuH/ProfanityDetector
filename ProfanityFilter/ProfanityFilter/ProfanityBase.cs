@@ -37,6 +37,11 @@ public class ProfanityBase
     private readonly IMemoryCache _cache;
 
     /// <summary>
+    /// Return the allow list;
+    /// </summary>
+    public AllowList AllowList { get; }
+
+    /// <summary>
     /// Constructor that initializes the standard profanity list.
     /// </summary>
     public ProfanityBase()
@@ -45,6 +50,7 @@ public class ProfanityBase
         _profanities = new HashSet<string>();
         var memoryCacheOptions = new MemoryCacheOptions();
         _cache = new MemoryCache(memoryCacheOptions);
+        AllowList = new AllowList();
     }
 
     /// <summary>
@@ -126,27 +132,38 @@ public class ProfanityBase
     public int Count => _profanityPatterns.Count + _profanities.Count;
 
     /// <summary>
-    /// Check whether a given term matches an entry in the profanity list. ContainsProfanity will first
+    /// Check whether a given pattern matches an entry in the profanity list. <see cref="HasProfanityByPattern"/> will first
+    /// check if the word exists on the allow list. If it is on the allow list, then false
+    /// will be returned.
+    /// </summary>
+    /// <param name="input">Pattern to check.</param>
+    /// <returns>True if the term contains a profanity, False otherwise.</returns>
+    public bool HasProfanityByPattern(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
+        // ReSharper disable once ConvertIfStatementToReturnStatement
+        if (AllowList.Contains(normalizedInput))
+            return false;
+        return _profanityPatterns.Any(p => HasProfanityByPattern(normalizedInput, p));
+    }
+
+    /// <summary>
+    /// Check whether a given term matches an entry in the profanity list. <see cref="HasProfanityByTerm"/> will first
     /// check if the word exists on the allow list. If it is on the allow list, then false
     /// will be returned.
     /// </summary>
     /// <param name="input">Term to check.</param>
     /// <returns>True if the term contains a profanity, False otherwise.</returns>
-    public virtual bool HasProfanityByPattern(string input)
+    public bool HasProfanityByTerm(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return false;
         var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
-
-        return _profanityPatterns.Any(p => HasProfanityByPattern(normalizedInput, p));
-    }
-
-    public virtual bool HasProfanityByTerm(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
+        // ReSharper disable once ConvertIfStatementToReturnStatement
+        if (AllowList.Contains(normalizedInput))
             return false;
-        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
-
         return _profanities.Any(profanity => HasProfanityByTerm(normalizedInput, profanity));
     }
 
@@ -167,8 +184,9 @@ public class ProfanityBase
         return result;
     }
 
-    protected string GetNormalizedInputOrCache(string input, bool ignoreNumbers = false)
+    protected internal string GetNormalizedInputOrCache(string input, bool ignoreNumbers = false)
     {
+        // return NormalizeInput(input, ignoreNumbers);
         var memoryCacheEntryOptions = new MemoryCacheEntryOptions
         {
             // TODO какой интервал экспирации лучше проставить?
@@ -211,13 +229,13 @@ public class ProfanityBase
     protected bool HasProfanity(string input, string profanity) =>
         HasProfanityByTerm(input, profanity) || HasProfanityByPattern(input, profanity);
 
-    protected virtual IReadOnlyList<string> GetMatchedProfanities(string sentence, bool includePartialMatch = true,
+    protected internal IReadOnlyList<string> GetMatchedProfanities(string input, bool includePartialMatch = true,
         bool includePatterns = true)
     {
-        if (string.IsNullOrEmpty(sentence))
+        if (string.IsNullOrEmpty(input))
             return Enumerable.Empty<string>().ToList().AsReadOnly();
         var matchedProfanities = new List<string>();
-        var normalizedInput = GetNormalizedInputOrCache(sentence, ignoreNumbers: true);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
         // var partialMatchedProfanityWords = Profanities
         //     .Where(profanity => HasProfanityByTerm(normalizedInput, profanity))
         //     .ToList();
@@ -226,13 +244,14 @@ public class ProfanityBase
         var matchedProfanityPhrases = profanityPhrases.Where(pp => normalizedInput.Contains(pp));
         matchedProfanities.AddRange(matchedProfanityPhrases);
 
-        var partialMatchedProfanityWords = GetPartialMatchedProfanityWords(sentence);
+        var partialMatchedProfanityWords = GetPartialMatchedProfanityWords(input);
 
         matchedProfanities.AddRange(partialMatchedProfanityWords);
 
         if (includePatterns)
         {
             var matchedPatterns = _profanityPatterns
+                .AsParallel()
                 .Where(pattern => HasProfanityByPattern(normalizedInput, pattern))
                 .ToList();
             matchedProfanities.AddRange(matchedPatterns);
@@ -243,19 +262,24 @@ public class ProfanityBase
         if (!includePartialMatch && matchedProfanities.Count > 1)
             matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));
 
+        matchedProfanities = FilterByAllowList(matchedProfanities).ToList();
+
         return matchedProfanities
             .Distinct()
             .ToList()
             .AsReadOnly();
     }
 
+    protected IEnumerable<string> FilterByAllowList(IEnumerable<string> profanities) =>
+        profanities.Where(word => !AllowList.Contains(word));
+
     private IEnumerable<CompleteWord> GetExtractedWordsOrCache2(string input)
     {
         using var semaphoreSlim = new Semaphore(1, 1000);
-        
+
         return Enumerable.Empty<CompleteWord>();
     }
-    
+
     private IEnumerable<CompleteWord> GetExtractedWordsOrCache(string input)
     {
         var memoryCacheEntryOptions = new MemoryCacheEntryOptions
@@ -273,30 +297,29 @@ public class ProfanityBase
         });
     }
 
-    private IReadOnlyList<string> GetPartialMatchedProfanityWords(string sentence)
+    internal IReadOnlyList<string> GetPartialMatchedProfanityWords(string input)
     {
-        var result = new List<string>();
-        var extractedCompleteWords = GetExtractedWordsOrCache(sentence);
+        var extractedCompleteWords = GetExtractedWordsOrCache(input);
         var extractedWords = extractedCompleteWords.Select(cw => cw.WholeWord);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
+        var profanityWords = _profanities
+            .AsParallel()
+            .Where(p => IsProfanityWord(p) && normalizedInput.Contains(p))
+            .ToHashSet();
 
-        foreach (var wholeWord in extractedWords)
-        {
-            var matchedProfanitiesByWord = GetMatchedProfanitiesByWord(wholeWord);
-            result.AddRange(matchedProfanitiesByWord);
-        }
+        var result = extractedWords
+            .AsParallel()
+            .SelectMany(w => GetMatchedProfanitiesByWord(w, profanityWords));
 
-        return result.AsReadOnly();
+        return result.ToList().AsReadOnly();
     }
 
-    private IReadOnlyList<string> GetMatchedProfanitiesByWord(string wholeWord)
+    private IReadOnlyList<string> GetMatchedProfanitiesByWord(string wholeWord, IEnumerable<string> profanityWords)
     {
         var result = new List<string>();
         var normalizedWholeWord = GetNormalizedInputOrCache(wholeWord, ignoreNumbers: true);
         var matchedProfanitiesWords = new HashSet<string>();
         var profanityWordsCounter = 0;
-        var profanityWords = _profanities
-            .Where(IsProfanityWord)
-            .ToArray();
 
         foreach (var profanityWord in profanityWords)
         {
