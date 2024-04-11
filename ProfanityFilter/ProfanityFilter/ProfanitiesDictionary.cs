@@ -1646,8 +1646,21 @@ public static class ProfanitiesDictionary
         "zoophilia",
         "zubb",
         // emojis
+        "🖕",
+        "\ud83d\udd95",
         "👉👌",
-        "\ud83d\udc49\ud83d\udc4c"
+        "\ud83d\udc49\ud83d\udc4c",
+        "👌👈",
+        "\ud83d\udc4c\ud83d\udc48",
+        "\u0fd7",
+        "\u0fd8",
+        "卍",
+        "\u534D",
+        "卐",
+        "\u0fd7",
+        "\u0fd8",
+        "🏳‍🌈",
+        "🌈"
     };
 
     public static readonly string[] Patterns =

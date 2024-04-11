@@ -554,9 +554,26 @@ public class ProfanityTests
 
         Assert.IsTrue(result);
     }
-    [TestCase("👉👌")]
+    [TestCase("love is ❤️")]
+    public void HasAnyProfanities_ReturnsFalse_WhenInputIsCorrectEmoji(string input)
+    {
+        var filter = CreateProfanityFilter();
+        var result = filter.HasAnyProfanities(input);
+
+        Assert.IsFalse(result, $"Found profanity in the input string '{input}'");
+    }
+    [TestCase("🖕")]
+    public void HasAnyProfanities_ReturnsTrue_WhenInputIsOnlyEmoji(string input)
+    {
+        var filter = CreateProfanityFilter();
+        var result = filter.HasAnyProfanities(input);
+
+        Assert.IsTrue(result, $"Couldn't find any profanity in the input string '{input}'");
+    }
+    [TestCase("👉👌 гараж")]
     [TestCase("\ud83d\udc49\ud83d\udc4c")]
-    public void HasAnyProfanities_ReturnsTrue_WhenInputIsEmoji(string input)
+    [TestCase("👌👈")]
+    public void HasAnyProfanities_ReturnsTrue_WhenInputIsComplexEmoji(string input)
     {
         var filter = CreateProfanityFilter();
         var result = filter.HasAnyProfanities(input);
