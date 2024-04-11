@@ -326,10 +326,10 @@ public class ProfanityBase
             if (normalizedWholeWord == profanityWord)
             {
                 result.Add(profanityWord);
-                matchedProfanitiesWords.Add(profanityWord);
-                profanityWordsCounter++;
+                // matchedProfanitiesWords.Add(profanityWord);
+                // profanityWordsCounter++;
                 // TODO maybe break?
-                continue;
+                break;
             }
 
             var inputContainsProfanity = normalizedWholeWord.Contains(profanityWord);
@@ -349,10 +349,8 @@ public class ProfanityBase
 
     private bool HasProfanityByTerm(string input, string targetTermProfanity)
     {
-        if (string.IsNullOrWhiteSpace(input))
-            return false;
         // TODO "son of a bitch" -> "son.of,a?bitch"
-        if (!_profanities.Contains(targetTermProfanity))
+        if (string.IsNullOrWhiteSpace(input) || !_profanities.Contains(targetTermProfanity))
             return false;
 
         var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
@@ -374,9 +372,9 @@ public class ProfanityBase
 
     private bool HasProfanityByPattern(string term, string pattern)
     {
-        if (string.IsNullOrWhiteSpace(term))
+        if (string.IsNullOrWhiteSpace(term) || !_profanityPatterns.Contains(pattern))
             return false;
         var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
-        return _profanityPatterns.Contains(pattern) && Regex.IsMatch(normalizedInput, pattern);
+        return Regex.IsMatch(normalizedInput, pattern);
     }
 }

@@ -90,8 +90,9 @@ internal static class StringExtensions
     internal static string SelectOnlyLetters(this string word)
     {
         var isContainsLettersRegex = new Regex(RegexPatterns.OnlyLettersPattern);
-        return isContainsLettersRegex.IsMatch(word)
-            ? isContainsLettersRegex.Match(word).Value
+        var match = isContainsLettersRegex.Match(word);
+        return match.Success
+            ? match.Value
             : word;
     }
 }
