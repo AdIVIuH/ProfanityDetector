@@ -554,7 +554,15 @@ public class ProfanityTests
 
         Assert.IsTrue(result);
     }
+    [TestCase("👉👌")]
+    [TestCase("\ud83d\udc49\ud83d\udc4c")]
+    public void HasAnyProfanities_ReturnsTrue_WhenInputIsEmoji(string input)
+    {
+        var filter = CreateProfanityFilter();
+        var result = filter.HasAnyProfanities(input);
 
+        Assert.IsTrue(result, $"Couldn't find any profanity in the input string '{input}'");
+    }
     private ProfanityFilter CreateProfanityFilter()
     {
         var filter = new ProfanityFilter();

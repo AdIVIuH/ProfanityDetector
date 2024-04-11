@@ -1645,6 +1645,9 @@ public static class ProfanitiesDictionary
         "zibbi",
         "zoophilia",
         "zubb",
+        // emojis
+        "👉👌",
+        "\ud83d\udc49\ud83d\udc4c"
     };
 
     public static readonly string[] Patterns =
