@@ -219,7 +219,7 @@ public class ProfanityBase
         return Profanities.Any(profanity => HasProfanityByTerm(normalizedInput, profanity));
     }
 
-    protected bool HasProfanityByTerm(string input, string targetTermProfanity)
+    private bool HasProfanityByTerm(string input, string targetTermProfanity)
     {
         if (string.IsNullOrWhiteSpace(input))
             return false;
@@ -240,6 +240,7 @@ public class ProfanityBase
                    GetExtractedWordsOrCache(normalizedInput)
                        .Select(cw => cw.WholeWord)
                        .Contains(targetTermProfanity);
+            
 
         return inputContainsProfanity;
     }

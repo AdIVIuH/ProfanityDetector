@@ -66,25 +66,32 @@ public class ProfanityFilter : ProfanityBase
             includePartialMatch: !removePartialMatches,
             includePatterns: true);
 
-        var result = new HashSet<string>();
-        var extractedWords = sentence.ExtractWords();
-        foreach (var profanity in matchedProfanities.OrderByDescending(x => x.Length))
+        var result = new List<string>();
+        var extractedWords = sentence.ExtractWords().ToArray();
+        
+        // TODO при добавлении слов в словарь делать их нормализацию
+        var profanityPhrases = matchedProfanities
+            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1)
+            .ToArray();
+        result.AddRange(profanityPhrases);
+        var profanityWords = matchedProfanities
+            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1)
+            .ToArray();
+        
+        foreach (var (_, _, wholeWord) in extractedWords)
         {
-            // TODO при добавлении слов в словарь делать их нормализацию
-            var profanityParts = profanity.Split(' ');
-            if (profanityParts.Length == 1)
-            {
-                foreach (var (_, _, wholeWord) in extractedWords)
-                    if (HasProfanity(wholeWord, profanity))
-                        result.Add(wholeWord);
-            }
-            else
-            {
-                result.Add(profanity);
-            }
+            foreach (var profanity in profanityWords)
+                if (HasProfanity(wholeWord, profanity))
+                {
+                    result.Add(wholeWord);
+                }
         }
+            
 
-        return result.ToList().AsReadOnly();
+        return result
+            .Distinct()
+            .ToList()
+            .AsReadOnly();
     }
 
     protected override IReadOnlyList<string> GetMatchedProfanities(string sentence,
