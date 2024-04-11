@@ -47,7 +47,7 @@ public class ProfanityTests
 
     [TestCase("You are a complete twat and a dick.", "twat", "dick")]
     [TestCase("You are, a complete twat, and a @dick:", "twat", "dick")]
-    [TestCase("You are a complete tWat and a DiCk.", "twat", "dick")]
+    [TestCase("You are a complete tWat and a DiCk.", "tWat", "DiCk")]
     public void DetectWordsWithProfanities_Returns2SwearWords(string input, params string[] expected)
     {
         var filter = CreateProfanityFilter();
@@ -63,7 +63,7 @@ public class ProfanityTests
     public void DetectWordsWithProfanities_ReturnsSwearPhrases(string input, params string[] expected)
     {
         var filter = CreateProfanityFilter();
-        var swearList = filter.DetectWordsWithProfanities(input);
+        var swearList = filter.DetectWordsWithProfanities(input, removePartialMatches: true);
 
         swearList.Count.Should().Be(expected.Length);
         swearList.Except(expected).Should().BeEmpty();
@@ -90,11 +90,8 @@ public class ProfanityTests
             "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
             removePartialMatches: false);
 
-        Assert.AreEqual(4, profanities.Count);
-        Assert.AreEqual("fucking", profanities[0]);
-        Assert.AreEqual("cock", profanities[1]);
-        Assert.AreEqual("fuck", profanities[2]);
-        Assert.AreEqual("shit", profanities[3]);
+        profanities.Should().HaveCount(4);
+        profanities.Should().Contain(new[] { "fucking", "cock", "fuck", "shit" });
     }
 
     [Test]
@@ -109,11 +106,8 @@ public class ProfanityTests
             "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
             removePartialMatches: false);
 
-        Assert.AreEqual(4, profanities.Count);
-        Assert.AreEqual("fucking", profanities[0]);
-        Assert.AreEqual("cock", profanities[1]);
-        Assert.AreEqual("fuck", profanities[2]);
-        Assert.AreEqual("shit", profanities[3]);
+        profanities.Should().HaveCount(4);
+        profanities.Should().Contain(new[] { "fucking", "cock", "fuck", "shit" });
     }
 
     [Test]
@@ -128,10 +122,8 @@ public class ProfanityTests
             "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
             removePartialMatches: true);
 
-        Assert.AreEqual(3, profanities.Count);
-        Assert.AreEqual("cock", profanities[1]);
-        Assert.AreEqual("fucking", profanities[0]);
-        Assert.AreEqual("shit", profanities[2]);
+        profanities.Should().HaveCount(3);
+        profanities.Should().Contain(new[] { "fucking", "cock", "shit" });
     }
 
     [Test]
@@ -151,24 +143,21 @@ public class ProfanityTests
     {
         var filter = CreateProfanityFilter();
 
-        var swearList = filter.DetectWordsWithProfanities(
+        var profanities = filter.DetectWordsWithProfanities(
             "I fucking live in Scunthorpe and it is a shit place to live. I would much rather live in penistone you great big cock fuck.",
             true);
 
-        Assert.AreEqual(3, swearList.Count);
-        Assert.AreEqual("cock", swearList[1]);
-        Assert.AreEqual("fucking", swearList[0]);
-        Assert.AreEqual("shit", swearList[2]);
+        profanities.Should().HaveCount(3);
+        profanities.Should().Contain(new[] { "fucking", "cock", "shit" });
     }
 
     [Test]
     public void DetectWordsWithProfanities_MultipleScunthorpes()
     {
         var filter = CreateProfanityFilter();
+        var profanities = filter.DetectWordsWithProfanities("Scunthorpe Scunthorpe", true);
 
-        var swearList = filter.DetectWordsWithProfanities("Scunthorpe Scunthorpe", true);
-
-        Assert.AreEqual(0, swearList.Count);
+        Assert.AreEqual(0, profanities.Count);
     }
 
     [Test]
@@ -211,7 +200,7 @@ public class ProfanityTests
         var swearList = filter.DetectWordsWithProfanities("ScUnThOrPePeNiStOnE KnOb", true);
 
         Assert.AreEqual(1, swearList.Count);
-        Assert.AreEqual("knob", swearList[0]);
+        Assert.AreEqual("KnOb", swearList[0]);
     }
 
     [Test]
@@ -294,10 +283,13 @@ public class ProfanityTests
         Assert.AreEqual(expected, censored);
     }
 
-    [TestCase("Ебаный рот этого казино, блять. Ты кто такой сука?", "****** рот этого казино, *****. Ты кто такой ****?")]
+    [TestCase("Ебаный рот этого казино, блять. Ты кто такой сука?",
+        "****** рот этого казино, *****. Ты кто такой ****?")]
     [TestCase("Выдать заказ лоху", "Выдать заказ ****")]
     [TestCase("Выдать лоху из лохнесса заказ", "Выдать **** из лохнесса заказ")]
     [TestCase("scunthorpe cunt", "scunthorpe ****")]
+    [TestCase("scunthorpe cunt1", "scunthorpe *****")]
+    [TestCase("scunthorpe $cunt", "scunthorpe *****")]
     [TestCase("cunt scunthorpe cunt scunthorpe cunt", "**** scunthorpe **** scunthorpe ****")]
     public void CensorString_ReturnsString_WithDoubleScunthorpeBasedDoubleCunt(string input, string expected)
     {
@@ -378,7 +370,7 @@ public class ProfanityTests
     public void CensorString_ReturnsCensoredString_WithNumbers(string input, string expected)
     {
         var filter = CreateProfanityFilter();
-        var censored = filter.CensorString(input, '*', true);
+        var censored = filter.CensorString(input, '*');
 
         Assert.AreEqual(expected, censored);
     }
@@ -394,7 +386,7 @@ public class ProfanityTests
     public void CensorString_ReturnsCensoredString_WithQuotes(string input, string expected)
     {
         var filter = CreateProfanityFilter();
-        var censored = filter.CensorString(input, '*', true);
+        var censored = filter.CensorString(input, '*');
 
         Assert.AreEqual(censored, expected);
     }

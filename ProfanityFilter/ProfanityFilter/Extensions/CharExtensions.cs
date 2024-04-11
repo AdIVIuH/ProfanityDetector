@@ -6,7 +6,7 @@ internal static class CharExtensions
 {
     internal static bool IsWordsSeparator(this char symbol)
     {
-        var regex = new Regex(RegexPatterns.WordsSeporatorsPattern);
+        var regex = new Regex(RegexPatterns.WordsSeparatorsPattern);
 
         return regex.IsMatch(symbol.ToString());
     }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Text.RegularExpressions;
+using ProfanityFilter.Models;
 
 namespace ProfanityFilter.Extensions;
 
@@ -11,31 +13,17 @@ internal static class StringExtensions
     /// </summary>
     /// <param name="text">The input text</param>
     /// <returns>A list of words in sentence</returns>
-    internal static IEnumerable<string> ExtractWords(this string text)
+    internal static IEnumerable<CompleteWord> ExtractWords(this string text)
     {
-        var wordBuilder = new StringBuilder();
-        // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-        for (var i = 0; i < text.Length; i++)
-        {
-            var symbol = text[i];
-            var isLastSymbol = i == text.Length - 1;
-            
-            if (symbol.IsWordsSeparator() && wordBuilder.Length == 0) continue;
-            if (symbol.IsWordsSeparator() && wordBuilder.Length > 0)
-            {
-                yield return wordBuilder.ToString();
-                wordBuilder.Clear();
-            }
-            else
-            {
-                wordBuilder.Append(symbol);
-            }
+        var regexMatches = Regex.Matches(text, RegexPatterns.WordsWithConnectorsPattern);
 
-            if (isLastSymbol && wordBuilder.Length > 0)
-                yield return wordBuilder.ToString();
-        }
+        return regexMatches.Select(m => new CompleteWord(
+            StartWordIndex: m.Index,
+            EndWordIndex: m.Index + m.Length,
+            WholeWord: m.Value)
+        );
     }
-
+    
     /// <summary>
     /// Finds the list of indexes from input text by search string 
     /// </summary>
@@ -60,5 +48,31 @@ internal static class StringExtensions
             yield return currentIndex;
             startSearchIndex = currentIndex + searchString.Length;
         }
+    }
+
+    internal static int FindStartWordIndex(this string wordPart, int pointerIndex)
+    {
+        var startIndex = pointerIndex;
+        while (startIndex > 0)
+        {
+            if (wordPart[startIndex - 1].IsWordsSeparator()) break;
+
+            startIndex -= 1;
+        }
+
+        return startIndex;
+    }
+
+    internal static int FindEndWordIndex(this string sentence, int pointerIndex)
+    {
+        var endIndex = pointerIndex;
+        while (endIndex < sentence.Length)
+        {
+            if (sentence[endIndex].IsWordsSeparator()) break;
+
+            endIndex += 1;
+        }
+
+        return endIndex;
     }
 }

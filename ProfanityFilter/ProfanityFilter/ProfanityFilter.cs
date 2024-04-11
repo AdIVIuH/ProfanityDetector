@@ -22,9 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using ProfanityFilter.Extensions;
-using ProfanityFilter.Models;
 
 namespace ProfanityFilter;
 
@@ -67,11 +65,21 @@ public class ProfanityFilter : ProfanityBase
             normalizedInput,
             includePartialMatch: !removePartialMatches,
             includePatterns: true);
-        var censorResult = CensorStringByProfanities(sentence, matchedProfanities,
-            censorCharacter: DefaultCensorString,
-            ignoreNumbers: true);
 
-        return censorResult.AppliedProfanities;
+        var result = new HashSet<string>();
+        var extractedWords = sentence.ExtractWords();
+        foreach (var profanity in matchedProfanities.OrderByDescending(x => x.Length))
+        {
+            var profanityParts = profanity.Split(' ');
+            if (profanityParts.Length > 1)
+                result.Add(profanity);
+            else
+                foreach (var (_, _, wholeWord) in extractedWords)
+                    if (HasProfanity(wholeWord, profanity))
+                        result.Add(wholeWord);
+        }
+
+        return result.ToList().AsReadOnly();
     }
 
     protected override IReadOnlyList<string> GetMatchedProfanities(string sentence,
@@ -82,7 +90,7 @@ public class ProfanityFilter : ProfanityBase
             sentence,
             includePartialMatch: includePartialMatch,
             includePatterns: includePatterns);
-        
+
         matchedProfanities = FilterByAllowList(matchedProfanities);
 
         return matchedProfanities;
@@ -94,18 +102,16 @@ public class ProfanityFilter : ProfanityBase
     /// </summary>
     /// <param name="sentence">The string to censor.</param>
     /// <param name="censorCharacter">The character to use for censoring.</param>
-    /// <param name="ignoreNumbers">Ignore any numbers that appear in a word.</param>
     /// <returns></returns>
-    public string CensorString(string sentence, char censorCharacter = DefaultCensorString,
-        bool ignoreNumbers = false)
+    public string CensorString(string sentence, char censorCharacter = DefaultCensorString)
     {
         ArgumentNullException.ThrowIfNull(sentence);
         if (string.IsNullOrEmpty(sentence) || string.IsNullOrWhiteSpace(sentence))
             return sentence;
 
         var profanities = DetectWordsWithProfanities(sentence, removePartialMatches: false);
-        var censorResult = CensorStringByProfanities(sentence, profanities, censorCharacter, ignoreNumbers);
-        return censorResult.CensoredSentence;
+        var censoredString = CensorStringByProfanities(sentence, profanities, censorCharacter);
+        return censoredString;
     }
 
     /// <summary>
@@ -132,13 +138,13 @@ public class ProfanityFilter : ProfanityBase
     /// check if the word exists on the allow list. If it is on the allow list, then false
     /// will be returned.
     /// </summary>
-    /// <param name="term">Term to check.</param>
+    /// <param name="input">Term to check.</param>
     /// <returns>True if the term contains a profanity, False otherwise.</returns>
-    public override bool HasProfanityByTerm(string term)
+    public override bool HasProfanityByTerm(string input)
     {
-        if (string.IsNullOrWhiteSpace(term)) return false;
+        if (string.IsNullOrWhiteSpace(input)) return false;
 
-        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
         // ReSharper disable once ConvertIfStatementToReturnStatement
         if (AllowList.Contains(normalizedInput))
             return false;
@@ -146,149 +152,44 @@ public class ProfanityFilter : ProfanityBase
         return base.HasProfanityByTerm(normalizedInput);
     }
 
-    /// <summary>
-    /// For a given sentence, look for the specified profanity. If it is found, look to see
-    /// if it is part of a containing word. If it is, then return the containing work and the start
-    /// and end positions of that word in the string.
-    /// 
-    /// For example, if the string contains "scunthorpe" and the passed in profanity is "cunt",
-    /// then this method will find "cunt" and work out that it is part of an enclosed word.
-    /// </summary>
-    /// <param name="toCheck">Sentence to check.</param>
-    /// <param name="profanity">Profanity to look for.</param>
-    /// <param name="ignoreNumbers"></param>
-    /// <returns>Tuple of the following format (start character, end character, found enclosed word).
-    /// If no enclosed word is found then return null.</returns>
-    private IEnumerable<CompleteWord> GetCompleteWords(
-        string toCheck,
-        string profanity,
-        bool ignoreNumbers = false)
+    private string CensorStringByProfanities(string sentence, IEnumerable<string> profanities,
+        char censorCharacter = DefaultCensorString)
     {
-        if (string.IsNullOrEmpty(toCheck)) yield break;
-
-        var words = GetExtractedWordsOrCache(toCheck);
-        var handledWords = new HashSet<string>();
-
-        foreach (var word in words)
-        {
-            var normalizedWord = GetNormalizedInputOrCache(word, ignoreNumbers);
-            if (!handledWords.Add(normalizedWord)) continue;
-
-            var isMatched = Regex.IsMatch(normalizedWord, profanity);
-            if (!isMatched) continue;
-            var indexes = toCheck.FindFirstOccurrenceIndexes(word);
-            foreach (var j in indexes)
-            {
-                var startWordIndex = FindStartWordIndex(toCheck, j);
-                var endWordIndex = FindEndWordIndex(toCheck, j);
-                var wholeWordLength = endWordIndex - startWordIndex;
-                var wholeWord = toCheck.Substring(startWordIndex, wholeWordLength);
-                handledWords.Add(wholeWord.ToLower());
-                yield return new CompleteWord(
-                    StartWordIndex: startWordIndex,
-                    EndWordIndex: endWordIndex,
-                    WholeWord: wholeWord);
-            }
-        }
-    }
-
-    private static int FindStartWordIndex(string wordPart, int pointerIndex)
-    {
-        var startIndex = pointerIndex;
-        while (startIndex > 0)
-        {
-            if (wordPart[startIndex - 1].IsWordsSeparator()) break;
-
-            startIndex -= 1;
-        }
-
-        return startIndex;
-    }
-
-    private static int FindEndWordIndex(string sentence, int pointerIndex)
-    {
-        var endIndex = pointerIndex;
-        while (endIndex < sentence.Length)
-        {
-            if (sentence[endIndex].IsWordsSeparator()) break;
-
-            endIndex += 1;
-        }
-
-        return endIndex;
-    }
-
-    private CensorProfanityResult CensorStringByProfanities(string sentence, IEnumerable<string> profanities,
-        char censorCharacter = DefaultCensorString,
-        bool ignoreNumbers = false)
-    {
-        var appliedProfanitiesResult = new List<string>();
         var censored = sentence;
 
         foreach (var profanity in profanities.OrderByDescending(x => x.Length))
-        {
-            var result = CensorProfanity(censored, profanity, censorCharacter, ignoreNumbers);
-            censored = result.CensoredSentence;
-            appliedProfanitiesResult.AddRange(result.AppliedProfanities);
-        }
+            censored = CensorProfanity(censored, profanity, censorCharacter);
 
-        var distinctProfanities = appliedProfanitiesResult
-            .Distinct()
-            .ToList()
-            .AsReadOnly();
-
-        return new CensorProfanityResult(censored, distinctProfanities);
+        return censored;
     }
 
-    private CensorProfanityResult CensorProfanity(string sentence, string profanity, char censorCharacter,
-        bool ignoreNumbers = false)
+    private string CensorProfanity(string sentence, string profanity, char censorCharacter)
     {
-        var filteredProfanityList = new List<string>();
-        string censored;
         var profanityParts = profanity.Split(' ');
-        // Как нормализовывать profanity? Что если это регулярка? При добавлении именно слова делать нормализацию.
-        // var normalizedProfanity = profanity;
-        // var profanityParts = profanity
-        //     // может не работать, если это регулярка
-        //     .ExtractWords()
-        //     .ToArray();
-        
-        if (profanityParts.Length == 1)
-        {
-            var result = CensorByProfanityWord(sentence, profanity, censorCharacter, ignoreNumbers);
-            censored = result.CensoredSentence;
-            filteredProfanityList.AddRange(result.AppliedProfanities);
-        }
-        else
-        {
-            censored = CensorByProfanityPhrase(sentence, profanity, censorCharacter);
-            filteredProfanityList.Add(profanity);
-        }
+        var censored = profanityParts.Length > 1
+            ? CensorByProfanityPhrase(sentence, profanity, censorCharacter)
+            : CensorByProfanityWord(sentence, profanity, censorCharacter);
 
-        return new CensorProfanityResult(censored, filteredProfanityList.AsReadOnly());
+        return censored;
     }
 
-    private CensorProfanityResult CensorByProfanityWord(string sentence, string profanity,
-        char censorCharacter,
-        bool ignoreNumbers = false)
+    private string CensorByProfanityWord(string sentence, string originalProfanity,
+        char censorCharacter)
     {
         var censored = new StringBuilder(sentence);
-        var appliedProfanities = new HashSet<string>();
-
-        foreach (var result in GetCompleteWords(toCheck: censored.ToString(), profanity, ignoreNumbers))
+        var extractedWords = sentence.ExtractWords();
+        var foundProfanities = extractedWords.Where(ew => ew.WholeWord == originalProfanity);
+        foreach (var result in foundProfanities)
         {
-            var (startWordIndex, endWordIndex, wholeWord) = result;
-            if (!HasProfanity(wholeWord, profanity)) continue;
-
-            appliedProfanities.Add(profanity);
+            var (startWordIndex, endWordIndex, _) = result;
             for (var i = startWordIndex; i < endWordIndex; i++)
                 censored[i] = censorCharacter;
         }
 
-        return new CensorProfanityResult(censored.ToString(), appliedProfanities.ToList().AsReadOnly());
+        return censored.ToString();
     }
-    
-    private string CensorByProfanityPhrase(string sentence, string profanity, char censorCharacter) => 
+
+    private string CensorByProfanityPhrase(string sentence, string profanity, char censorCharacter) =>
         sentence.Replace(profanity, CreateCensoredString(profanity, censorCharacter));
 
     private IReadOnlyList<string> FilterByAllowList(IEnumerable<string> profanities) =>

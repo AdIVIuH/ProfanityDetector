@@ -26,6 +26,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using ProfanityFilter.Extensions;
+using ProfanityFilter.Models;
 
 namespace ProfanityFilter;
 
@@ -64,7 +65,8 @@ public class ProfanityBase
     /// <param name="pattern">The profanity pattern to add.</param>
     public void AddProfanityPattern(string pattern)
     {
-        if (string.IsNullOrEmpty(pattern)) throw new ArgumentNullException(nameof(pattern));
+        if (string.IsNullOrEmpty(pattern)) 
+            throw new ArgumentNullException(nameof(pattern));
 
         ProfanityPatterns.Add(pattern);
     }
@@ -98,7 +100,7 @@ public class ProfanityBase
         // TODO add gomogliths }|{ -> ж
 
         var extractedWords = GetExtractedWordsOrCache(input);
-        var resultWords = ReplaceGomogliths(extractedWords);
+        var resultWords = ReplaceGomogliths(extractedWords.Select(cw=>cw.WholeWord));
          
         if (ignoreNumbers)
             resultWords = SelectOnlyLetters(resultWords);
@@ -128,7 +130,7 @@ public class ProfanityBase
         });
     }
 
-    protected string[] GetExtractedWordsOrCache(string input)
+    protected CompleteWord[] GetExtractedWordsOrCache(string input)
     {
         var memoryCacheEntryOptions = new MemoryCacheEntryOptions
         {
@@ -208,34 +210,36 @@ public class ProfanityBase
         return ProfanityPatterns.Any(p => HasProfanityByPattern(normalizedInput, p));
     }
 
-    public virtual bool HasProfanityByTerm(string term)
+    public virtual bool HasProfanityByTerm(string input)
     {
-        if (string.IsNullOrWhiteSpace(term))
+        if (string.IsNullOrWhiteSpace(input))
             return false;
-        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
 
         return Profanities.Any(profanity => HasProfanityByTerm(normalizedInput, profanity));
     }
 
-    protected bool HasProfanityByTerm(string term, string targetProfanity)
+    protected bool HasProfanityByTerm(string input, string targetTermProfanity)
     {
-        if (string.IsNullOrWhiteSpace(term))
+        if (string.IsNullOrWhiteSpace(input))
             return false;
         // TODO "son of a bitch" -> "son.of,a?bitch"
-        if (!Profanities.Contains(targetProfanity))
+        if (!Profanities.Contains(targetTermProfanity))
             return false;
 
-        var normalizedInput = GetNormalizedInputOrCache(term, ignoreNumbers: true);
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
 
-        if (normalizedInput == targetProfanity)
+        if (normalizedInput == targetTermProfanity)
             return true;
 
-        var inputContainsProfanity = normalizedInput.Contains(targetProfanity);
-        var profanityParts = targetProfanity.Split(' ');
+        var inputContainsProfanity = normalizedInput.Contains(targetTermProfanity);
+        var profanityParts = targetTermProfanity.Split(' ');
         if (profanityParts.Length == 1)
             return inputContainsProfanity &&
                    // TODO это может сильно влиять на производительность!
-                   GetExtractedWordsOrCache(normalizedInput).Contains(targetProfanity);
+                   GetExtractedWordsOrCache(normalizedInput)
+                       .Select(cw => cw.WholeWord)
+                       .Contains(targetTermProfanity);
 
         return inputContainsProfanity;
     }
@@ -263,7 +267,7 @@ public class ProfanityBase
     /// <param name="profanity">Profanity to check</param>
     /// <returns>True if the term contains a profanity, False otherwise.</returns>
     protected bool HasProfanity(string input, string profanity) =>
-        HasProfanityByTerm(input) || HasProfanityByPattern(input, profanity);
+        HasProfanityByTerm(input, profanity) || HasProfanityByPattern(input, profanity);
 
     protected virtual IReadOnlyList<string> GetMatchedProfanities(string sentence, bool includePartialMatch = true,
         bool includePatterns = true)

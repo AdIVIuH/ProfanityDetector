@@ -19,12 +19,12 @@ public class StringExtensionsTests
 
     [TestCase("первое слово", "первое", "слово")]
     [TestCase("первое  слово", "первое", "слово")]
-    public void ExtractWords_ShouldReturn_TwoWords(string input, params string[] expected)
+    public void ExtractWords_ShouldReturnTwoWords_WithSpaceSeparators(string input, params string[] expected)
     {
         var result = input.ExtractWords().ToArray();
         
         result.Length.Should().Be(expected.Length);
-        result.Should().Contain(expected);
+        result.Select(w=>w.WholeWord).Should().Contain(expected);
     }
     
     [TestCase("первое12слово", "первое12слово")]
@@ -36,7 +36,7 @@ public class StringExtensionsTests
         var result = input.ExtractWords().ToArray();
         
         result.Length.Should().Be(expected.Length);
-        result.Should().Contain(expected);
+        result.Select(w=>w.WholeWord).Should().Contain(expected);
     }
 
     [TestCase(" первое", "первое")]
@@ -44,7 +44,7 @@ public class StringExtensionsTests
     {
         var result = input.ExtractWords();
 
-        result.Should().BeEquivalentTo(expected);
+        result.Select(w=>w.WholeWord).Should().BeEquivalentTo(expected);
     }
 
     [TestCase("'слово", "слово")]
@@ -63,7 +63,7 @@ public class StringExtensionsTests
     {
         var result = input.ExtractWords();
 
-        result.Should().BeEquivalentTo(expected);
+        result.Select(w=>w.WholeWord).Should().BeEquivalentTo(expected);
     }
 
     [TestCase("(слово)", "слово")]
@@ -71,7 +71,7 @@ public class StringExtensionsTests
     {
         var result = input.ExtractWords();
 
-        result.Should().BeEquivalentTo(expected);
+        result.Select(w=>w.WholeWord).Should().BeEquivalentTo(expected);
     }
 
     [TestCase(',')]
@@ -96,7 +96,7 @@ public class StringExtensionsTests
 
         var expectedResult = new[] { "первое", "второе" };
         result.Length.Should().Be(expectedResult.Length);
-        result.Should().Contain(expectedResult);
+        result.Select(w=>w.WholeWord).Should().Contain(expectedResult);
     }
     
     [TestCase("первое_слово", "первое", "слово")]
@@ -108,6 +108,6 @@ public class StringExtensionsTests
         var result = input.ExtractWords().ToArray();
         
         result.Length.Should().Be(expected.Length);
-        result.Should().Contain(expected);
+        result.Select(w=>w.WholeWord).Should().Contain(expected);
     }
 }
