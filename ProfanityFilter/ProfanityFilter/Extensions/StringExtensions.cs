@@ -23,7 +23,7 @@ internal static class StringExtensions
             WholeWord: m.Value)
         );
     }
-    
+
     /// <summary>
     /// Finds the list of indexes from input text by search string 
     /// </summary>
@@ -74,5 +74,24 @@ internal static class StringExtensions
         }
 
         return endIndex;
+    }
+
+    internal static string ReplaceHomoglyphs(this string word)
+    {
+        // TODO not implemented yet: Homoglyphs }|{ -> ж
+        return word;
+    }
+    
+    /// <summary>
+    /// Вернет только буквы в слове
+    /// </summary>
+    /// <param name="word"></param>
+    /// <returns></returns>
+    internal static string SelectOnlyLetters(this string word)
+    {
+        var isContainsLettersRegex = new Regex(RegexPatterns.OnlyLettersPattern);
+        return isContainsLettersRegex.IsMatch(word)
+            ? isContainsLettersRegex.Match(word).Value
+            : word;
     }
 }

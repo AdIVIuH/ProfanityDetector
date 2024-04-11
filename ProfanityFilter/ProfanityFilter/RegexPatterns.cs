@@ -20,4 +20,7 @@ public static class RegexPatterns
     
     [RegexPattern]
     internal const string WordsWithConnectorsPattern = @"[^\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
+
+    [RegexPattern] 
+    internal const string OnlyLettersPattern = @"[a-zA-Z]+";
 }
