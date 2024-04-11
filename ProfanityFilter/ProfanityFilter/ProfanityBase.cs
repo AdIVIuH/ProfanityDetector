@@ -275,7 +275,6 @@ public class ProfanityBase
         var matchedProfanities = new List<string>();
         var normalizedInput = GetNormalizedInputOrCache(sentence, ignoreNumbers: true);
         var partialMatchedProfanityWords = Profanities
-            // TODO "son of a bitch" -> "son.of,a?bitch"
             .Where(profanity => HasProfanityByTerm(normalizedInput, profanity))
             .ToList();
         matchedProfanities.AddRange(partialMatchedProfanityWords);

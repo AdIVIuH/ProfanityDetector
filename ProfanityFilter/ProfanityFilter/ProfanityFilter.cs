@@ -70,13 +70,16 @@ public class ProfanityFilter : ProfanityBase
         var extractedWords = sentence.ExtractWords();
         foreach (var profanity in matchedProfanities.OrderByDescending(x => x.Length))
         {
+            // TODO при добавлении слов в словарь делать их нормализацию
             var profanityParts = profanity.Split(' ');
-            if (profanityParts.Length > 1)
-                result.Add(profanity);
-            else
+            if (profanityParts.Length == 1)
+            {
                 foreach (var (_, _, wholeWord) in extractedWords)
                     if (HasProfanity(wholeWord, profanity))
                         result.Add(wholeWord);
+            }
+            else
+                result.Add(profanity);
         }
 
         return result.ToList().AsReadOnly();
@@ -189,13 +192,14 @@ public class ProfanityFilter : ProfanityBase
         return censored.ToString();
     }
 
-    private string CensorByProfanityPhrase(string sentence, string profanity, char censorCharacter) =>
-        sentence.Replace(profanity, CreateCensoredString(profanity, censorCharacter));
-
     private IReadOnlyList<string> FilterByAllowList(IEnumerable<string> profanities) =>
         profanities.Where(word => !AllowList.Contains(word))
             .ToList()
             .AsReadOnly();
+    
+    private string CensorByProfanityPhrase(string sentence, string profanity, char censorCharacter) =>
+        sentence.Replace(profanity, CreateCensoredString(profanity, censorCharacter));
+
 
     private static string CreateCensoredString(string sentence, char censorCharacter)
     {
