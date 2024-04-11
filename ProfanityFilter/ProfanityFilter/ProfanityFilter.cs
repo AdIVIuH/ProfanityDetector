@@ -79,7 +79,9 @@ public class ProfanityFilter : ProfanityBase
                         result.Add(wholeWord);
             }
             else
+            {
                 result.Add(profanity);
+            }
         }
 
         return result.ToList().AsReadOnly();
@@ -155,51 +157,49 @@ public class ProfanityFilter : ProfanityBase
         return base.HasProfanityByTerm(normalizedInput);
     }
 
-    private string CensorStringByProfanities(string sentence, IEnumerable<string> profanities,
-        char censorCharacter = DefaultCensorString)
-    {
-        var censored = sentence;
-
-        foreach (var profanity in profanities.OrderByDescending(x => x.Length))
-            censored = CensorProfanity(censored, profanity, censorCharacter);
-
-        return censored;
-    }
-
-    private string CensorProfanity(string sentence, string profanity, char censorCharacter)
-    {
-        var profanityParts = profanity.Split(' ');
-        var censored = profanityParts.Length > 1
-            ? CensorByProfanityPhrase(sentence, profanity, censorCharacter)
-            : CensorByProfanityWord(sentence, profanity, censorCharacter);
-
-        return censored;
-    }
-
-    private string CensorByProfanityWord(string sentence, string originalProfanity,
-        char censorCharacter)
-    {
-        var censored = new StringBuilder(sentence);
-        var extractedWords = sentence.ExtractWords();
-        var foundProfanities = extractedWords.Where(ew => ew.WholeWord == originalProfanity);
-        foreach (var result in foundProfanities)
-        {
-            var (startWordIndex, endWordIndex, _) = result;
-            for (var i = startWordIndex; i < endWordIndex; i++)
-                censored[i] = censorCharacter;
-        }
-
-        return censored.ToString();
-    }
-
     private IReadOnlyList<string> FilterByAllowList(IEnumerable<string> profanities) =>
         profanities.Where(word => !AllowList.Contains(word))
             .ToList()
             .AsReadOnly();
-    
+
+    private string CensorStringByProfanities(string sentence, IReadOnlyList<string> profanities,
+        char censorCharacter = DefaultCensorString)
+    {
+        var censored = sentence;
+        censored = CensorByProfanityPhrases(censored, profanities, censorCharacter);
+        censored = CensorByProfanityWords(censored, profanities, censorCharacter);
+
+        return censored;
+    }
+
+    private static string CensorByProfanityWords(string sentence, IReadOnlyList<string> profanities,
+        char censorCharacter)
+    {
+        var profanityWords = profanities
+            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1)
+            .ToHashSet();
+        var censoredBuilder = new StringBuilder(sentence);
+        var extractedWords = sentence.ExtractWords();
+        var foundProfanities = extractedWords.Where(ew => profanityWords.Contains(ew.WholeWord));
+        foreach (var result in foundProfanities)
+        {
+            var (startWordIndex, endWordIndex, _) = result;
+            for (var i = startWordIndex; i < endWordIndex; i++)
+                censoredBuilder[i] = censorCharacter;
+        }
+
+        return censoredBuilder.ToString();
+    }
+
+    private string CensorByProfanityPhrases(string sentence, IReadOnlyList<string> profanities, char censorCharacter)
+    {
+        var profanityPhrases = profanities.Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1);
+        return profanityPhrases.Aggregate(sentence, (current, profanityPhrase) =>
+            CensorByProfanityPhrase(current, profanityPhrase, censorCharacter));
+    }
+
     private string CensorByProfanityPhrase(string sentence, string profanity, char censorCharacter) =>
         sentence.Replace(profanity, CreateCensoredString(profanity, censorCharacter));
-
 
     private static string CreateCensoredString(string sentence, char censorCharacter)
     {
