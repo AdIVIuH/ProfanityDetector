@@ -370,7 +370,7 @@ public class ProfanityTests
     public void CensorString_ReturnsCensoredString_WithNumbers(string input, string expected)
     {
         var filter = CreateProfanityFilter();
-        var censored = filter.CensorString(input, '*');
+        var censored = filter.CensorString(input);
 
         Assert.AreEqual(expected, censored);
     }
@@ -386,7 +386,7 @@ public class ProfanityTests
     public void CensorString_ReturnsCensoredString_WithQuotes(string input, string expected)
     {
         var filter = CreateProfanityFilter();
-        var censored = filter.CensorString(input, '*');
+        var censored = filter.CensorString(input);
 
         Assert.AreEqual(censored, expected);
     }
@@ -554,6 +554,7 @@ public class ProfanityTests
 
         Assert.IsTrue(result);
     }
+
     [TestCase("love is ❤️")]
     public void HasAnyProfanities_ReturnsFalse_WhenInputIsCorrectEmoji(string input)
     {
@@ -562,6 +563,7 @@ public class ProfanityTests
 
         Assert.IsFalse(result, $"Found profanity in the input string '{input}'");
     }
+
     [TestCase("🖕")]
     public void HasAnyProfanities_ReturnsTrue_WhenInputIsOnlyEmoji(string input)
     {
@@ -570,6 +572,7 @@ public class ProfanityTests
 
         Assert.IsTrue(result, $"Couldn't find any profanity in the input string '{input}'");
     }
+
     [TestCase("👉👌 гараж")]
     [TestCase("\ud83d\udc49\ud83d\udc4c")]
     [TestCase("👌👈")]
@@ -580,6 +583,7 @@ public class ProfanityTests
 
         Assert.IsTrue(result, $"Couldn't find any profanity in the input string '{input}'");
     }
+
     private ProfanityFilter CreateProfanityFilter()
     {
         var filter = new ProfanityFilter();
