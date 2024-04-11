@@ -16,8 +16,8 @@ public static class RegexPatterns
     /// <para> M - All combining marks. This includes the Mn, Mc, and Me categories. </para>
     /// <para> Sk - Symbol, Modifier</para>
     [RegexPattern] 
-    internal const string WordsSeparatorsPattern = @"[\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{C}\p{M}\p{Sk}]+";
+    internal const string WordsSeparatorsPattern = @"[\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
     
     [RegexPattern] 
-    internal const string WordsWithConnectorsPattern = @"[^\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{C}\p{M}\p{Sk}]+";
+    internal const string WordsWithConnectorsPattern = @"[^\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
 }

@@ -260,7 +260,7 @@ public class ProfanityTests
         "You are a ****** little ****, and you like to **** **** **** in an ******* ********.")]
     [TestCase("Scunthorpe", "Scunthorpe")]
     [TestCase("ScUnThOrPe", "ScUnThOrPe")]
-    [TestCase("ScUnThOrPePeNiStOnE", "ScUnThOrPePeNiStOnE")]
+    [TestCase("ScUnThOrPePeNiStOnE", "ScUnThOrPePeNiStOnE")] //TODO не верный тест? тут есть cunt и penis
     [TestCase("scunthorpe", "scunthorpe")]
     public void CensorString_ReturnsStringWithProfanities_BleepedOutNoAllowList(string input, string expected)
     {
@@ -502,17 +502,9 @@ public class ProfanityTests
         Assert.IsTrue(filter.HasAnyProfanities(swearWord));
     }
 
-    [Test]
-    public void HasAnyProfanities_ReturnsTrue_WhenProfanityExists()
-    {
-        var filter = CreateProfanityFilter();
-        var result = filter.HasAnyProfanities("Scunthorpe");
-
-        Assert.IsTrue(result);
-    }
-
     [TestCase("Scuntarsefuckhorpe")]
     [TestCase("fuckлох")]
+    [TestCase("fuckfuck")]
     [TestCase("fuckingfuck")]
     public void HasAnyProfanities_ReturnsTrue_WhenMultipleProfanitiesExist_InWordsList(string input)
     {
@@ -554,6 +546,7 @@ public class ProfanityTests
 
         Assert.IsTrue(result);
     }
+    
     [TestCase("👉👌")]
     [TestCase("\ud83d\udc49\ud83d\udc4c")]
     public void HasAnyProfanities_ReturnsTrue_WhenInputIsEmoji(string input)

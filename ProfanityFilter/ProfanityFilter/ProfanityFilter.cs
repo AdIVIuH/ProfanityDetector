@@ -67,26 +67,29 @@ public class ProfanityFilter : ProfanityBase
             includePatterns: true);
 
         var result = new List<string>();
-        var extractedWords = sentence.ExtractWords().ToArray();
-        
+        var extractedWords = sentence.ExtractWords()
+            .Select(w => w.WholeWord)
+            .ToArray();
+
         // TODO при добавлении слов в словарь делать их нормализацию
         var profanityPhrases = matchedProfanities
-            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1)
+            .Where(IsProfanityPhrase)
             .ToArray();
+        // TODO тут потеряется Case
         result.AddRange(profanityPhrases);
-        var profanityWords = matchedProfanities
-            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1)
+
+        var profanityWordsOrPatterns = matchedProfanities
+            .Where(p => IsProfanityWord(p) || IsProfanityPattern(p))
             .ToArray();
-        
-        foreach (var (_, _, wholeWord) in extractedWords)
-        {
-            foreach (var profanity in profanityWords)
-                if (HasProfanity(wholeWord, profanity))
-                {
-                    result.Add(wholeWord);
-                }
-        }
-            
+
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        foreach (var wholeWord in extractedWords)
+            // ReSharper disable once LoopCanBeConvertedToQuery
+        foreach (var profanityWordOrPattern in profanityWordsOrPatterns)
+            if (HasProfanity(wholeWord, profanityWordOrPattern))
+                result.Add(wholeWord);
+
+        result = FilterByAllowList(result).ToList();
 
         return result
             .Distinct()
@@ -164,6 +167,18 @@ public class ProfanityFilter : ProfanityBase
         return base.HasProfanityByTerm(normalizedInput);
     }
 
+    /// <summary>
+    /// Check whether a given input matches an entry in the profanity list. 
+    /// </summary>
+    /// <param name="input">Term to check.</param>
+    /// <returns>True if the term contains a profanity, False otherwise.</returns>
+    public bool HasAnyProfanities(string input) =>
+        !string.IsNullOrEmpty(input)
+        && DetectWordsWithProfanities(
+                input,
+                removePartialMatches: true)
+            .Any();
+
     private IReadOnlyList<string> FilterByAllowList(IEnumerable<string> profanities) =>
         profanities.Where(word => !AllowList.Contains(word))
             .ToList()
@@ -179,15 +194,13 @@ public class ProfanityFilter : ProfanityBase
         return censored;
     }
 
-    private static string CensorByProfanityWords(string sentence, IReadOnlyList<string> profanities,
+    private string CensorByProfanityWords(string sentence, IEnumerable<string> profanities,
         char censorCharacter)
     {
-        var profanityWords = profanities
-            .Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1)
-            .ToHashSet();
         var censoredBuilder = new StringBuilder(sentence);
         var extractedWords = sentence.ExtractWords();
-        var foundProfanities = extractedWords.Where(ew => profanityWords.Contains(ew.WholeWord));
+        var foundProfanities = extractedWords.Where(ew => profanities.Contains(ew.WholeWord));
+
         foreach (var result in foundProfanities)
         {
             var (startWordIndex, endWordIndex, _) = result;
@@ -200,7 +213,7 @@ public class ProfanityFilter : ProfanityBase
 
     private string CensorByProfanityPhrases(string sentence, IReadOnlyList<string> profanities, char censorCharacter)
     {
-        var profanityPhrases = profanities.Where(p => p.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1);
+        var profanityPhrases = profanities.Where(IsProfanityPhrase);
         return profanityPhrases.Aggregate(sentence, (current, profanityPhrase) =>
             CensorByProfanityPhrase(current, profanityPhrase, censorCharacter));
     }
