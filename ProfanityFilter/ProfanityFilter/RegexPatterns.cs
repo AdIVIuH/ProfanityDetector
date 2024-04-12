@@ -15,12 +15,11 @@ public static class RegexPatterns
     /// <para> C - All other characters. This includes the Cc, Cf, Cs, Co, and Cn categories </para>
     /// <para> M - All combining marks. This includes the Mn, Mc, and Me categories. </para>
     /// <para> Sk - Symbol, Modifier</para>
-    [RegexPattern] 
-    internal const string WordsSeparatorsPattern = @"[\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
-    
-    [RegexPattern]
-    internal const string WordsWithConnectorsPattern = @"[^\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
+    [RegexPattern] internal const string WordsSeparatorsPattern =
+        @"[\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
 
-    [RegexPattern] 
-    internal const string OnlyLettersPattern = @"[a-zA-Z]+";
+    [RegexPattern] internal const string WordsWithConnectorsPattern =
+        @"[^\p{Pc}\p{Pd}\p{Ps}\p{Pe}\p{Pi}\p{Pf}\p{Po}\p{Z}\p{M}\p{Sk}\p{Cc}\p{Cf}\p{Co}\p{Cn}]+";
+
+    [RegexPattern] internal const string OnlyLettersPattern = @"[\p{L}]+";
 }

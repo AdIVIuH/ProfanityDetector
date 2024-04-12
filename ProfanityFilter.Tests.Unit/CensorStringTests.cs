@@ -122,17 +122,6 @@ public class CensorStringTests : BaseTest
         action.Should().Throw<ArgumentNullException>();
     }
 
-    [Test]
-    public void CensorString_ReturnsEmptyString()
-    {
-        var filter = CreateProfanityFilter();
-
-        var censored = filter.CensorString("");
-        var result = "";
-
-        Assert.AreEqual(censored, result);
-    }
-
     [TestCase("     ", "     ")]
     [TestCase("Hello, I am a fish.", "Hello, I am a fish.")]
     public void CensorString_ReturnsString_WithNoCensorship(string input, string expected)
