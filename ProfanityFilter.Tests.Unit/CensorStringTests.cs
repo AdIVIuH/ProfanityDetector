@@ -209,7 +209,7 @@ public class CensorStringTests : BaseTest
 
         Assert.AreEqual(expected, censored);
     }
-    
+
     [TestCase("жаба", "****")]
     [TestCase("жаба<>трава", "***********")]
     [TestCase("home<>трава", "***********")]
@@ -221,10 +221,19 @@ public class CensorStringTests : BaseTest
         Assert.AreEqual(expected, censored);
     }
 
+    [TestCase("h12ome", "******")]
+    public void CensorString_ReturnsCensoredString_WithDoubleNumbers(string input, string expected)
+    {
+        var filter = CreatePoliteFilter();
+        var censored = filter.CensorString(input);
+
+        Assert.AreEqual(expected, censored);
+    }
+
     private ProfanityFilter CreatePoliteFilter()
     {
         var filter = new ProfanityFilter();
-        filter.AddProfanityWords(new [] {"luggage", "empire", "home", "end", "козёл", "жаба"});
+        filter.AddProfanityWords(new[] { "luggage", "empire", "home", "end", "козёл", "жаба" });
         return filter;
     }
 }
