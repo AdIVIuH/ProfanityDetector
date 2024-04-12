@@ -199,4 +199,32 @@ public class CensorStringTests : BaseTest
 
         Assert.AreEqual(expected, censored);
     }
+
+    [TestCase("FrOnT EnD", "FrOnT ***")]
+    [TestCase("EMPIRE", "******")]
+    public void CensorString_ReturnsCensoredString_IgnoreCase(string input, string expected)
+    {
+        var filter = CreatePoliteFilter();
+        var censored = filter.CensorString(input);
+
+        Assert.AreEqual(expected, censored);
+    }
+    
+    [TestCase("жаба", "****")]
+    [TestCase("жаба<>трава", "***********")]
+    [TestCase("home<>трава", "***********")]
+    public void CensorString_ReturnsCensoredString_WithLessGreaterSign(string input, string expected)
+    {
+        var filter = CreatePoliteFilter();
+        var censored = filter.CensorString(input);
+
+        Assert.AreEqual(expected, censored);
+    }
+
+    private ProfanityFilter CreatePoliteFilter()
+    {
+        var filter = new ProfanityFilter();
+        filter.AddProfanityWords(new [] {"luggage", "empire", "home", "end", "козёл", "жаба"});
+        return filter;
+    }
 }
