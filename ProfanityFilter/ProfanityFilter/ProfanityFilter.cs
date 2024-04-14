@@ -54,39 +54,13 @@ public class ProfanityFilter : ProfanityBase
         if (string.IsNullOrEmpty(sentence))
             return new List<string>().AsReadOnly();
 
-        var wordsWithProfanities = new List<string>();
-        var normalizedInput = GetNormalizedInputOrCache(sentence, ignoreNumbers: true);
         var matchedProfanities = GetMatchedProfanities(
-            normalizedInput,
+            sentence,
             includePartialMatch: !removePartialMatches,
             includePatterns: true);
 
-        var extractedWords = sentence.ExtractWords()
-            .Select(w => w.WholeWord)
-            .ToArray();
-
-        // TODO при добавлении слов в словарь делать их нормализацию
-        var profanityPhrases = matchedProfanities
-            .Where(IsProfanityPhrase)
-            .ToArray();
-        // TODO тут потеряется Case
-        wordsWithProfanities.AddRange(profanityPhrases);
-
-        var profanityWordsOrPatterns = matchedProfanities
-            .Where(p => IsProfanityWord(p) || IsProfanityPattern(p))
-            .ToArray();
-
-        // ReSharper disable once LoopCanBeConvertedToQuery
-        foreach (var wholeWord in extractedWords)
-            // ReSharper disable once LoopCanBeConvertedToQuery
-        foreach (var profanityWordOrPattern in profanityWordsOrPatterns)
-            if (HasProfanity(wholeWord, profanityWordOrPattern))
-                wordsWithProfanities.Add(wholeWord);
-
-        wordsWithProfanities = FilterByAllowList(wordsWithProfanities).ToList();
-
-        return wordsWithProfanities
-            .Distinct()
+        return matchedProfanities
+            .Select(x => x.Text)
             .ToList()
             .AsReadOnly();
     }

@@ -208,17 +208,14 @@ public class ProfanityBase
     {
         if (string.IsNullOrWhiteSpace(profanity))
             return false;
-        return _profanities.Contains(profanity) &&
-               profanity.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+        // TODO переписал это с обычного сплита, т.к. в регулярке учитываюстя все разделяющие символы. Добавить кэширование \ компиляцию регулярки 
+        return _profanities.Contains(profanity) && Regex.Matches(profanity, RegexPatterns.WordsSeparatorsPattern).Count > 1;
     }
 
     protected bool IsProfanityWord(string profanity) =>
         !string.IsNullOrWhiteSpace(profanity)
         && _profanities.Contains(profanity)
         && profanity.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 1;
-
-    protected bool IsProfanityPattern(string pattern) =>
-        !string.IsNullOrWhiteSpace(pattern) && _profanityPatterns.Contains(pattern);
 
     /// <summary>
     /// Check whether a given input matches an entry in the profanity list. 
@@ -229,45 +226,89 @@ public class ProfanityBase
     protected bool HasProfanity(string input, string profanity) =>
         HasProfanityByTerm(input, profanity) || HasProfanityByPattern(input, profanity);
 
-    protected internal IReadOnlyList<string> GetMatchedProfanities(string input, bool includePartialMatch = true,
+    protected internal IReadOnlyList<TextWithProfanities> GetMatchedProfanities(string input,
+        bool includePartialMatch = true,
         bool includePatterns = true)
     {
         if (string.IsNullOrEmpty(input))
-            return Enumerable.Empty<string>().ToList().AsReadOnly();
-        var matchedProfanities = new List<string>();
-        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
-        // var partialMatchedProfanityWords = Profanities
-        //     .Where(profanity => HasProfanityByTerm(normalizedInput, profanity))
-        //     .ToList();
-
-        var profanityPhrases = _profanities.Where(IsProfanityPhrase);
-        var matchedProfanityPhrases = profanityPhrases.Where(pp => normalizedInput.Contains(pp));
-        matchedProfanities.AddRange(matchedProfanityPhrases);
-
-        var partialMatchedProfanityWords = GetPartialMatchedProfanityWords(input);
-
-        matchedProfanities.AddRange(partialMatchedProfanityWords);
+            return Enumerable.Empty<TextWithProfanities>().ToList().AsReadOnly();
+        var textWithProfanitiesList = new List<TextWithProfanities>();
+        var profanityPhrases = FindProfanityPhrases(input);
+        var wordsWithProfanities = FindWordsWithProfanities(input);
+        textWithProfanitiesList.AddRange(profanityPhrases);
+        textWithProfanitiesList.AddRange(wordsWithProfanities);
 
         if (includePatterns)
         {
-            var matchedPatterns = _profanityPatterns
-                .AsParallel()
-                .Where(pattern => HasProfanityByPattern(normalizedInput, pattern))
-                .ToList();
-            matchedProfanities.AddRange(matchedPatterns);
+            var matchedPatterns = FindProfanitiesByPatterns(input);
+            textWithProfanitiesList.AddRange(matchedPatterns);
         }
 
-        // TODO Нужны тесты
-        // TODO Возможно тут есть проблема с тем, что не будем обрабатывать все необходимые плохие слова
-        if (!includePartialMatch && matchedProfanities.Count > 1)
-            matchedProfanities.RemoveAll(x => matchedProfanities.Any(y => x != y && y.Contains(x)));
+        var textWithUnAllowedProfanities = textWithProfanitiesList
+            .Where(x => !AllowList.Contains(x.Text))
+            .ToList();
 
-        matchedProfanities = FilterByAllowList(matchedProfanities).ToList();
+        var result = includePartialMatch
+            ? textWithUnAllowedProfanities
+            : FilterPartialMatchedProfanities(textWithUnAllowedProfanities);
 
-        return matchedProfanities
+        return result
             .Distinct()
             .ToList()
             .AsReadOnly();
+    }
+
+    // TODO с сайд эффектами написано, но смысл такой
+    private static IEnumerable<TextWithProfanities> FilterPartialMatchedProfanities(
+        IReadOnlyList<TextWithProfanities> profanities)
+    {
+        var allFoundProfanities = profanities.SelectMany(x => x.Profanities).ToList();
+        foreach (var item in profanities)
+        {
+            if (profanities.Any(x => x.Text != item.Text && x.Text.Contains(item.Text))) 
+                continue;
+
+            if (item.Profanities.Count == 1)
+            {
+                yield return item;
+                continue;
+            }
+
+            foreach (var profanity in item.Profanities)
+                // TODO Нужны тесты
+                // TODO Возможно тут есть проблема с тем, что не будем обрабатывать все необходимые плохие слова
+                if (allFoundProfanities.Any(p2 => p2 != profanity && p2.Contains(profanity)))
+                    item.RemoveProfanity(profanity);
+            
+            yield return item;
+        }
+    }
+
+    private IReadOnlyList<TextWithProfanities> FindProfanitiesByPatterns(string input)
+    {
+        // TODO нормализация??? 
+        var normalizedInput = input.ToLower(CultureInfo.InvariantCulture);
+        var result = _profanityPatterns
+            .AsParallel()
+            // TODO добавить логику для не нормализованной строки
+            .Select(pattern => (UsedPattern: pattern, RegexMatches: Regex.Matches(normalizedInput, pattern)))
+            .Where(x => x.RegexMatches.Count > 0)
+            // TODO а что потом делать с гомоглифами?
+            .SelectMany(x => x.RegexMatches.Select(m =>
+                TextWithProfanities.Create(input.Substring(m.Index, m.Value.Length), x.UsedPattern)))
+            .ToList();
+
+        return result.AsReadOnly();
+    }
+
+    private IEnumerable<TextWithProfanities> FindProfanityPhrases(string input)
+    {
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
+        var profanityPhrases = _profanities.Where(IsProfanityPhrase);
+        var matchedProfanityPhrases = profanityPhrases.Where(normalizedInput.Contains);
+        // TODO получается, что тут теряется изначальный текст и case
+        var result = matchedProfanityPhrases.Select(p => TextWithProfanities.Create(p, p));
+        return result;
     }
 
     protected IEnumerable<string> FilterByAllowList(IEnumerable<string> profanities) =>
@@ -297,54 +338,67 @@ public class ProfanityBase
         });
     }
 
-    internal IReadOnlyList<string> GetPartialMatchedProfanityWords(string input)
+    private IReadOnlyList<TextWithProfanities> FindWordsWithProfanities(string input)
     {
+        var foundContainingProfanities = SearchContainingProfanityWords(input);
         var extractedCompleteWords = GetExtractedWordsOrCache(input);
-        var extractedWords = extractedCompleteWords.Select(cw => cw.WholeWord);
-        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
-        var profanityWords = _profanities
+        var wordsInOriginalInput = extractedCompleteWords.Select(cw => cw.WholeWord);
+        var result = wordsInOriginalInput
             .AsParallel()
-            .Where(p => IsProfanityWord(p) && normalizedInput.Contains(p))
-            .ToHashSet();
+            .Select(w => (OriginalWord: w, FoundProfanities: FindProfanitiesInWord(w, foundContainingProfanities)))
+            .Where(x => x.FoundProfanities.Any())
+            .Select(x => TextWithProfanities.Create(x.OriginalWord, x.FoundProfanities))
+            .ToList();
 
-        var result = extractedWords
-            .AsParallel()
-            .SelectMany(w => GetMatchedProfanitiesByWord(w, profanityWords));
 
-        return result.ToList().AsReadOnly();
+        return result.AsReadOnly();
     }
 
-    private IReadOnlyList<string> GetMatchedProfanitiesByWord(string wholeWord, IEnumerable<string> profanityWords)
+    private IReadOnlyList<string> SearchContainingProfanityWords(string input)
     {
-        var result = new List<string>();
-        var normalizedWholeWord = GetNormalizedInputOrCache(wholeWord, ignoreNumbers: true);
-        var matchedProfanitiesWords = new HashSet<string>();
-        var profanityWordsCounter = 0;
+        var normalizedInput = GetNormalizedInputOrCache(input, ignoreNumbers: true);
+        var result = _profanities
+            .AsParallel()
+            .Where(p => IsProfanityWord(p) && normalizedInput.Contains(p))
+            .Distinct()
+            .ToList();
+        return result.AsReadOnly();
+    }
 
-        foreach (var profanityWord in profanityWords)
+    private IReadOnlyList<string> FindProfanitiesInWord(string originalWord,
+        IEnumerable<string> foundContainingProfanities)
+    {
+        var resultProfanitiesList = new List<string>();
+        var normalizedWholeWord = GetNormalizedInputOrCache(originalWord, ignoreNumbers: true);
+        var potentialProfanities = new HashSet<string>();
+        var foundProfanitiesCounter = 0;
+
+        foreach (var profanityWord in foundContainingProfanities)
         {
             if (normalizedWholeWord == profanityWord)
             {
-                result.Add(profanityWord);
+                resultProfanitiesList.Add(profanityWord);
                 // matchedProfanitiesWords.Add(profanityWord);
                 // profanityWordsCounter++;
                 // TODO maybe break?
-                break;
+                continue;
             }
+            // todo проверить длину слова и вернуть если profanityWord.Length > normalizedWholeWord
 
             var inputContainsProfanity = normalizedWholeWord.Contains(profanityWord);
             if (!inputContainsProfanity)
                 continue;
 
             var regexMatches = Regex.Matches(normalizedWholeWord, profanityWord);
-            profanityWordsCounter += regexMatches.Count;
-            matchedProfanitiesWords.Add(profanityWord);
+            foundProfanitiesCounter += regexMatches.Count;
+            potentialProfanities.Add(profanityWord);
         }
 
-        if (profanityWordsCounter > 1)
-            result.AddRange(matchedProfanitiesWords);
+        if (foundProfanitiesCounter > 1)
+            // TODO в теории можем не пробегаться прям по всему и остановиться как только счетчик достиг > 1
+            resultProfanitiesList.AddRange(potentialProfanities);
 
-        return result.AsReadOnly();
+        return resultProfanitiesList;
     }
 
     private bool HasProfanityByTerm(string input, string targetTermProfanity)
@@ -366,7 +420,7 @@ public class ProfanityBase
         if (!inputContainsProfanity)
             return false;
 
-        var partialMatchedProfanityWords = GetPartialMatchedProfanityWords(input);
+        var partialMatchedProfanityWords = FindWordsWithProfanities(input);
         return partialMatchedProfanityWords.Any();
     }
 
