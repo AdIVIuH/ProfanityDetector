@@ -1,6 +1,6 @@
 namespace ProfanityFilter.Models;
 
-public record CompleteWord(
+internal record CompleteWord(
     int StartWordIndex,
     int EndWordIndex,
     string WholeWord

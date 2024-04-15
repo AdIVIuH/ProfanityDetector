@@ -23,7 +23,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Microsoft.Extensions.Caching.Memory;
 using ProfanityFilter.Extensions;
 using ProfanityFilter.Models;
@@ -232,6 +231,7 @@ public class ProfanityBase
     {
         if (string.IsNullOrEmpty(input))
             return Enumerable.Empty<TextWithProfanities>().ToList().AsReadOnly();
+        
         var textWithProfanitiesList = new List<TextWithProfanities>();
         var profanityPhrases = FindProfanityPhrases(input);
         var wordsWithProfanities = FindWordsWithProfanities(input);
@@ -309,16 +309,6 @@ public class ProfanityBase
         // TODO получается, что тут теряется изначальный текст и case
         var result = matchedProfanityPhrases.Select(p => TextWithProfanities.Create(p, p));
         return result;
-    }
-
-    protected IEnumerable<string> FilterByAllowList(IEnumerable<string> profanities) =>
-        profanities.Where(word => !AllowList.Contains(word));
-
-    private IEnumerable<CompleteWord> GetExtractedWordsOrCache2(string input)
-    {
-        using var semaphoreSlim = new Semaphore(1, 1000);
-
-        return Enumerable.Empty<CompleteWord>();
     }
 
     private IEnumerable<CompleteWord> GetExtractedWordsOrCache(string input)
